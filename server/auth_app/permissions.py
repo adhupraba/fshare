@@ -14,3 +14,10 @@ class IsRegularUser(BasePermission):
 class IsGuest(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.is_guest()
+
+
+class IsAdminOrRegularUser(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and (
+            request.user.is_admin() or request.user.is_regular_user()
+        )
