@@ -1,0 +1,7 @@
+Django
+django_rest_framework
+django-cors-headers
+djangorestframework-simplejwt
+pyotp
+qrcode
+cryptography
