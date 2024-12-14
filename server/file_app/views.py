@@ -1,6 +1,7 @@
 import os, uuid, base64, jwt
 from django.conf import settings
 from django.utils import timezone
+from django.http import HttpResponse
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -62,6 +63,9 @@ class FileUploadView(APIView):
             rcp_can_view = rcp.get("can_view", global_can_view)
             rcp_can_download = rcp.get("can_download", global_can_download)
 
+            if rcp_can_download:
+                rcp_can_view = True
+
             try:
                 recipient = User.objects.get(email=email)
             except User.DoesNotExist:
@@ -122,7 +126,7 @@ class SharedFileAccessView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, token):
-        secret_key = os.environ.get("JWT_SECRET_KEY")
+        secret_key = os.environ.get("AUTH_JWT_SECRET_KEY")
 
         try:
             payload = jwt.decode(token, secret_key, algorithms=["HS256"])
@@ -152,22 +156,10 @@ class SharedFileAccessView(APIView):
                 {"message": "Link expired."}, status=status.HTTP_403_FORBIDDEN
             )
 
-        # Determine if user wants to view or download by query parameter
-        action = request.query_params.get("action", "view")
-
-        if action == "download":
-            # Check download permission
-            if not share.can_download:
-                return Response(
-                    {"message": "Download not allowed."},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-        else:
-            # Viewing the file
-            if not share.can_view:
-                return Response(
-                    {"message": "View not allowed."}, status=status.HTTP_403_FORBIDDEN
-                )
+        if not share.can_view:
+            return Response(
+                {"message": "View not allowed."}, status=status.HTTP_403_FORBIDDEN
+            )
 
         f_obj = share.file
         file_path = f_obj.get_full_path()
@@ -180,14 +172,41 @@ class SharedFileAccessView(APIView):
         with open(file_path, "rb") as fd:
             combined_data = fd.read()
 
+        b64_enc_key = base64.b64encode(share.encrypted_file_key).decode("utf-8")
+        permissions_data = {
+            "can_view": share.can_view,
+            "can_download": share.can_download,
+            "encrypted_file_key": b64_enc_key,
+        }
+
         nonce = combined_data[:12]
         encrypted_data = combined_data[12:]
         decrypted_data = decrypt_data(nonce, encrypted_data)
 
-        b64_enc_key = base64.b64encode(share.encrypted_file_key).decode("utf-8")
+        import json
 
-        response = Response(decrypted_data, content_type="application/octet-stream")
-        response["Content-Disposition"] = f'attachment; filename="{f_obj.filename}"'
-        response["X-Encrypted-File-Key"] = b64_enc_key
+        json_part = json.dumps(permissions_data, ensure_ascii=False)
+        # boundary for multipart response separating json and file data in the response
+        boundary = "----FILESHAREBOUNDARY"
+
+        # multipart response data
+        multipart_body = (
+            f"--{boundary}\r\n"
+            "Content-Type: application/json; charset=utf-8\r\n"
+            "\r\n"
+            f"{json_part}\r\n"
+            f"--{boundary}\r\n"
+            "Content-Type: application/octet-stream\r\n"
+            f'Content-Disposition: attachment; filename="{f_obj.filename}"\r\n'
+            "\r\n"
+        )
+        multipart_body = multipart_body.encode("utf-8") + decrypted_data + b"\r\n"
+        multipart_body += f"--{boundary}--\r\n".encode("utf-8")
+
+        response = HttpResponse(
+            multipart_body,
+            content_type=f"multipart/mixed; boundary={boundary}",
+        )
+        response.status_code = status.HTTP_200_OK
 
         return response

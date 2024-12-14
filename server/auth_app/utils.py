@@ -1,8 +1,7 @@
-import pyotp
-import qrcode
-import base64
+import pyotp, qrcode, base64, os, jwt
+from datetime import timedelta
+from django.utils import timezone
 from io import BytesIO
-import os
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -49,12 +48,27 @@ def generate_mfa_secret():
     return pyotp.random_base32()
 
 
+def generate_mfa_temp_token(user_id):
+    secret_key = os.environ.get("MFA_JWT_SECRET_KEY")
+    exp = timezone.now() + timedelta(minutes=5)  # valid for 5 minutes
+    payload = {"user_id": user_id, "purpose": "mfa_auth", "exp": exp.timestamp()}
+    return jwt.encode(payload, secret_key, algorithm="HS256")
+
+
+def decode_mfa_temp_token(token):
+    secret_key = os.environ.get("MFA_JWT_SECRET_KEY")
+    payload = jwt.decode(token, secret_key, algorithms=["HS256"])
+    if payload.get("purpose") != "mfa_auth":
+        raise jwt.InvalidTokenError("Not a MFA token")
+    return payload
+
+
 def verify_totp(token, secret):
     totp = pyotp.TOTP(secret)
     return totp.verify(token)
 
 
-def generate_totp_uri(secret, email, issuer="MySecureApp"):
+def generate_totp_uri(secret, email, issuer="FShare"):
     return f"otpauth://totp/{issuer}:{email}?secret={secret}&issuer={issuer}"
 
 

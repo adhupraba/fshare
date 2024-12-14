@@ -46,7 +46,7 @@ def encrypt_with_public_key(public_key_pem: bytes, data: bytes) -> bytes:
 
 
 def generate_share_jwt(file_id: int):
-    secret_key = os.environ.get("JWT_SECRET_KEY")
+    secret_key = os.environ.get("AUTH_JWT_SECRET_KEY")
     exp = timezone.now() + timedelta(minutes=30)
     payload = {"file_id": file_id, "exp": exp.timestamp()}
     token = jwt.encode(payload, secret_key, algorithm="HS256")

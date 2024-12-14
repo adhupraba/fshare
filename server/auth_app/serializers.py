@@ -9,13 +9,13 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["name", "email", "password", "master_password", "role"]
+        fields = ["name", "email", "password", "master_password"]
         extra_kwargs = {"password": {"write_only": True}}
 
     def create(self, validated_data):
         name = validated_data["name"]
         email = validated_data["email"].lower()
-        role = validated_data.get("role", "user")
+        role = "user"
         password = validated_data["password"]
         master_password = validated_data["master_password"]
 
@@ -48,4 +48,3 @@ class UserDetailSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
-    totp_code = serializers.CharField(required=False, allow_blank=True)
