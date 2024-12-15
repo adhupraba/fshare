@@ -6,6 +6,7 @@ import { store } from "./store.ts";
 import { logout, setTokens, setUser } from "./reducers/auth-reducer.ts";
 import { Provider } from "react-redux";
 import "./styles/index.css";
+import { Toaster } from "./components/ui/toaster.tsx";
 
 const access = localStorage.getItem(ACCESS_TOKEN);
 const refresh = localStorage.getItem(REFRESH_TOKEN);
@@ -29,6 +30,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Provider store={store}>
       <App />
+      <Toaster />
     </Provider>
   </StrictMode>
 );

@@ -1,6 +1,8 @@
 from django.urls import path
 from .views import FileUploadView, SharedFileAccessView
 
+app_name = "file_app"
+
 urlpatterns = [
     path("upload", FileUploadView.as_view(), name="file-upload"),
     path(

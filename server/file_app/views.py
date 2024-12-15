@@ -1,4 +1,4 @@
-import os, uuid, base64, jwt
+import os, uuid, base64, jwt, json
 from django.conf import settings
 from django.utils import timezone
 from django.http import HttpResponse
@@ -6,9 +6,8 @@ from django.http import HttpResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 
-from auth_app.permissions import IsAdminOrRegularUser
+from auth_app.permissions import IsAdminOrRegularUser, IsActive
 from auth_app.models import User
 from .models import File, FileShare
 from .serializers import FileUploadSerializer
@@ -21,20 +20,19 @@ from .utils import (
 
 
 class FileUploadView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminOrRegularUser]
+    permission_classes = [IsAdminOrRegularUser]
 
     def post(self, request):
         serializer = FileUploadSerializer(data=request.data)
+
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         uploaded_file = serializer.validated_data["file"]
-        file_symmetric_key_b64 = serializer.validated_data["file_symmetric_key"]
+        encryption_key_b64 = serializer.validated_data["encryption_key_b64"]
+        file_metadata = serializer.validated_data["file_metadata"]
         recipients_data = serializer.validated_data["recipients"]
-        global_can_view = serializer.validated_data["can_view"]
-        global_can_download = serializer.validated_data["can_download"]
 
-        original_name = uploaded_file.name
         file_content = uploaded_file.read()
 
         # Server-side encryption
@@ -49,19 +47,16 @@ class FileUploadView(APIView):
 
         f_obj = File.objects.create(
             owner=request.user,
-            filename=original_name,
-            encrypted_file_path=unique_filename,
+            server_enc_file_name=unique_filename,
+            file_metadata=file_metadata,
         )
 
-        # Decode file symmetric key
-        file_symmetric_key = base64.b64decode(file_symmetric_key_b64)
+        expires_at = timezone.now() + timezone.timedelta(minutes=30)
 
-        valid_recipients_count = 0
-        # For all recipients
         for rcp in recipients_data:
             email = rcp.get("email")
-            rcp_can_view = rcp.get("can_view", global_can_view)
-            rcp_can_download = rcp.get("can_download", global_can_download)
+            rcp_can_view = rcp.get("can_view", True)
+            rcp_can_download = rcp.get("can_download", False)
 
             if rcp_can_download:
                 rcp_can_view = True
@@ -74,7 +69,7 @@ class FileUploadView(APIView):
                 continue
 
             enc_key_for_recipient = encrypt_with_public_key(
-                recipient.public_key, file_symmetric_key
+                recipient.public_key, encryption_key_b64
             )
             FileShare.objects.create(
                 file=f_obj,
@@ -82,40 +77,30 @@ class FileUploadView(APIView):
                 encrypted_file_key=enc_key_for_recipient,
                 can_view=rcp_can_view,
                 can_download=rcp_can_download,
+                expires_at=expires_at,
             )
             valid_recipients_count += 1
 
-        if valid_recipients_count == 0:
-            # No valid recipients, share with owner
-            if request.user.public_key:
-                owner_enc_key = encrypt_with_public_key(
-                    request.user.public_key, file_symmetric_key
-                )
-                FileShare.objects.create(
-                    file=f_obj,
-                    recipient=request.user,
-                    encrypted_file_key=owner_enc_key,
-                    can_view=global_can_view,
-                    can_download=global_can_download,
-                )
-            else:
-                # Cleanup if no public key for owner
-                f_obj.delete()
-                return Response(
-                    {"message": "Owner does not have a public key, cannot share."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+        if request.user.public_key:
+            owner_enc_key = encrypt_with_public_key(
+                request.user.public_key, encryption_key_b64
+            )
+            FileShare.objects.create(
+                file=f_obj,
+                recipient=request.user,
+                encrypted_file_key=owner_enc_key,
+                can_view=True,
+                can_download=True,
+                expires_at=expires_at,
+            )
 
-        # Generate a single share link for this file
+        # Generate a single share token which can be used by all the recipients
         token = generate_share_jwt(f_obj.id)
-        share_link = f"{request.scheme}://{request.get_host()}/files/shared/{token}"
 
         return Response(
             {
                 "message": "File uploaded and shares created successfully.",
-                "file_id": f_obj.id,
-                "filename": f_obj.filename,
-                "share_link": share_link,
+                "share_token": token,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -123,7 +108,7 @@ class FileUploadView(APIView):
 
 class SharedFileAccessView(APIView):
     # Authenticated users only
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsActive]
 
     def get(self, request, token):
         secret_key = os.environ.get("AUTH_JWT_SECRET_KEY")
@@ -182,8 +167,6 @@ class SharedFileAccessView(APIView):
         nonce = combined_data[:12]
         encrypted_data = combined_data[12:]
         decrypted_data = decrypt_data(nonce, encrypted_data)
-
-        import json
 
         json_part = json.dumps(permissions_data, ensure_ascii=False)
         # boundary for multipart response separating json and file data in the response

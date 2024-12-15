@@ -1,9 +1,8 @@
 import os, jwt
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives.asymmetric import padding, serialization
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes, serialization
 from django.utils import timezone
-from datetime import timedelta
 
 
 def get_server_key():
@@ -47,7 +46,7 @@ def encrypt_with_public_key(public_key_pem: bytes, data: bytes) -> bytes:
 
 def generate_share_jwt(file_id: int):
     secret_key = os.environ.get("AUTH_JWT_SECRET_KEY")
-    exp = timezone.now() + timedelta(minutes=30)
+    exp = timezone.now() + timezone.timedelta(minutes=30)
     payload = {"file_id": file_id, "exp": exp.timestamp()}
     token = jwt.encode(payload, secret_key, algorithm="HS256")
 

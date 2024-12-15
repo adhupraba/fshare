@@ -21,6 +21,20 @@ function addRefreshSubscriber(callback: RefreshSubscriberCallback) {
   refreshSubscribers.push(callback);
 }
 
+function modifyErrorObject(error: any) {
+  let message = error.message;
+  const d = error.response.data;
+
+  if (d?.non_field_errors?.length) {
+    message = d.non_field_errors[0];
+  } else if (d?.message) {
+    message = d.message;
+  }
+
+  error.message = message;
+  error.response.data.message = message;
+}
+
 api.interceptors.request.use(
   (config) => {
     const state = store.getState();
@@ -41,6 +55,7 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    modifyErrorObject(error);
 
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;

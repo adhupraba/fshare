@@ -3,6 +3,7 @@ export type TRole = "admin" | "user" | "guest";
 export type TUser = {
   id: number;
   name: string;
+  username: string;
   email: string;
   role: TRole;
 };
@@ -16,6 +17,7 @@ export type TLoginMFARequiredRespose = {
   message: string;
   action: "mfa_required";
   mfa_temp_token: string;
+  token_exp_at: string;
 };
 
 export type TLoginMFASetupResponse = {
@@ -23,6 +25,7 @@ export type TLoginMFASetupResponse = {
   action: "mfa_setup";
   mfa_temp_token: string;
   totp_qr: string;
+  token_exp_at: string;
 };
 
 export type TLoginResponse = TLoginMFARequiredRespose | TLoginMFASetupResponse;
@@ -30,6 +33,7 @@ export type TLoginResponse = TLoginMFARequiredRespose | TLoginMFASetupResponse;
 export type TRegisterRequest = {
   name: string;
   email: string;
+  username: string;
   password: string;
   master_password: string;
 };
@@ -38,6 +42,7 @@ export type TRegisterResponse = {
   message: string;
   mfa_temp_token: string;
   totp_qr: string;
+  token_exp_at: string;
 };
 
 export type TMFAConfirmRequest = {

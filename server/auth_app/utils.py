@@ -1,11 +1,11 @@
 import pyotp, qrcode, base64, os, jwt
-from datetime import timedelta
 from django.utils import timezone
 from io import BytesIO
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from django.conf import settings
 
 
 def generate_rsa_key_pair():
@@ -48,11 +48,14 @@ def generate_mfa_secret():
     return pyotp.random_base32()
 
 
-def generate_mfa_temp_token(user_id):
+def generate_mfa_temp_token(user_id) -> tuple[str, str]:
     secret_key = os.environ.get("MFA_JWT_SECRET_KEY")
-    exp = timezone.now() + timedelta(minutes=5)  # valid for 5 minutes
+    exp = timezone.now() + timezone.timedelta(
+        minutes=settings.MFA_TOKEN_TIME_LIMIT_IN_MINS
+    )
     payload = {"user_id": user_id, "purpose": "mfa_auth", "exp": exp.timestamp()}
-    return jwt.encode(payload, secret_key, algorithm="HS256")
+    token = jwt.encode(payload, secret_key, algorithm="HS256")
+    return token, exp.isoformat()
 
 
 def decode_mfa_temp_token(token):

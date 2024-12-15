@@ -8,9 +8,14 @@ import api from "@/lib/api";
 import { TMFAConfirmRequest, TMFAConfirmResponse } from "@/types/auth";
 import { store } from "@/store";
 import { setTokens, setUser } from "@/reducers/auth-reducer";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
+import { AxiosError } from "axios";
 
 interface IInputOTPFormProps {
   mfaTempToken: string;
+  tokenExpAt: string;
 }
 
 const otpSchema = z.object({
@@ -21,7 +26,10 @@ const otpSchema = z.object({
 
 type OTPSchema = z.infer<typeof otpSchema>;
 
-const InputOTPForm: React.FC<IInputOTPFormProps> = ({ mfaTempToken }) => {
+const InputOTPForm: React.FC<IInputOTPFormProps> = ({ mfaTempToken, tokenExpAt }) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { toast } = useToast();
   const form = useForm<OTPSchema>({
     resolver: zodResolver(otpSchema),
     defaultValues: {
@@ -31,21 +39,34 @@ const InputOTPForm: React.FC<IInputOTPFormProps> = ({ mfaTempToken }) => {
 
   const onSubmit = async (values: OTPSchema) => {
     try {
+      setIsLoading(true);
+
       const { data } = await api.post<TMFAConfirmResponse>("/api/auth/mfa/confirm", {
         mfa_temp_token: mfaTempToken,
         totp_code: values.pin,
       } satisfies TMFAConfirmRequest);
 
+      toast({
+        title: "Success",
+        description: "Logged in successfully",
+      });
+
       store.dispatch(setTokens({ access: data.access, refresh: data.refresh }));
       store.dispatch(setUser({ user: data.user }));
-    } catch (err) {
-      console.error("mfa setup error =>", err);
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="w-2/3 space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-6">
         <FormField
           control={form.control}
           name="pin"
@@ -64,13 +85,18 @@ const InputOTPForm: React.FC<IInputOTPFormProps> = ({ mfaTempToken }) => {
                   </InputOTPGroup>
                 </InputOTP>
               </FormControl>
-              <FormDescription>Please enter the MFA code from your authenticator app.</FormDescription>
+              <FormDescription>
+                Please enter the MFA code from your authenticator app within {new Date(tokenExpAt).toLocaleTimeString()}
+                .
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <Button type="submit">Submit</Button>
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          Submit {isLoading && <Loader2 className="animate-spin w-3 h-3" />}
+        </Button>
       </form>
     </Form>
   );
