@@ -83,6 +83,8 @@ class FileUploadSerializer(serializers.Serializer):
         if not isinstance(recipients, list):
             raise serializers.ValidationError("recipients must be a list of objects.")
 
+        filtered_recipients = []
+
         for recipient in recipients:
             if not isinstance(recipient, dict):
                 raise serializers.ValidationError(
@@ -104,4 +106,7 @@ class FileUploadSerializer(serializers.Serializer):
                 if not isinstance(recipient[key], bool):
                     raise serializers.ValidationError(f"'{key}' must be a boolean.")
 
-        return recipients
+            if recipient["can_view"]:
+                filtered_recipients.append(recipient)
+
+        return filtered_recipients

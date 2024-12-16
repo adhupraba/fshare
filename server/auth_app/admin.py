@@ -19,6 +19,9 @@ class UserAdmin(DjangoUserAdmin):
                     "username",
                     "role",
                     "mfa_enabled",
+                    "mfa_secret",
+                    "encrypted_private_key",
+                    "public_key",
                 )
             },
         ),

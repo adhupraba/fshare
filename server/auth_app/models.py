@@ -62,8 +62,8 @@ class User(AbstractUser):
 
     # Encryption fields
     master_password_hash = models.CharField(max_length=255, blank=True, null=True)
-    encrypted_private_key = models.BinaryField(null=True, blank=True)
-    public_key = models.BinaryField(null=True, blank=True)
+    encrypted_private_key = models.TextField(null=True, blank=True)
+    public_key = models.TextField(null=True, blank=True)
 
     # MFA fields
     mfa_secret = models.CharField(max_length=64, blank=True, null=True)

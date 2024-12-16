@@ -9,7 +9,7 @@ def validate_name(name: str):
     if len(name) > 255:
         raise serializers.ValidationError("Name cannot exceed 255 characters.")
     if not re.match(
-        r"^(?:[A-Za-z]{2,}(?: [A-Za-z]{1,2})*|[A-Za-z]{1,2}(?: [A-Za-z]{1,2})*)$", name
+        r"^(?:[A-Za-z]{2,}(?: [A-Za-z]{1,})*|[A-Za-z]{1,}(?: [A-Za-z]{1,})*)$", name
     ):
         raise serializers.ValidationError("Name must contain only alphabets.")
     return name

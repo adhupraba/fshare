@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
+import PasswordRequirements from "../password-requirements";
 
 interface IRegisterFormProps {
   callback: (data: TRegisterResponse) => void;
@@ -124,16 +125,7 @@ const RegisterForm: React.FC<IRegisterFormProps> = ({ callback }) => {
           )}
         />
 
-        <div className="text-muted-foreground text-sm space-y-2">
-          <p>Password and Master Password should contain:</p>
-          <ul className="px-5 list-disc list-outside inline-block">
-            <li>Atleast one lower case character</li>
-            <li>Atleast one upper case character</li>
-            <li>Atleast one number</li>
-            <li>Atleast one special character from {"!@#$%^&*(),.?:{}|<>"}</li>
-            <li>5 to 20 characters</li>
-          </ul>
-        </div>
+        <PasswordRequirements />
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           Register {isLoading && <Loader2 className="animate-spin w-3 h-3" />}

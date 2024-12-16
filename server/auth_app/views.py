@@ -7,7 +7,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
-from .serializers import UserRegisterSerializer, LoginSerializer
+from .serializers import (
+    UserRegisterSerializer,
+    LoginSerializer,
+    GetEncPrivateKeySerializer,
+)
 from .permissions import IsActive
 from .utils import (
     decode_mfa_temp_token,
@@ -155,6 +159,26 @@ class GetUserView(APIView):
     def get(self, request):
         return Response(
             get_formatted_user(request.user),
+            status=status.HTTP_200_OK,
+        )
+
+
+class GetEncPrivateKey(APIView):
+    permission_classes = [IsActive]
+
+    def post(self, request):
+        serializer = GetEncPrivateKeySerializer(
+            data=request.data, context={"user": request.user}
+        )
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "message": "Master password validated successfully.",
+                "enc_private_key": request.user.encrypted_private_key,
+            },
             status=status.HTTP_200_OK,
         )
 

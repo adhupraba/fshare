@@ -1,5 +1,4 @@
 import App from "./app.tsx";
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ACCESS_TOKEN, AUTH_USER, REFRESH_TOKEN } from "./config/constants.ts";
 import { store } from "./store.ts";
@@ -27,10 +26,8 @@ if (access && refresh) {
 }
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <Provider store={store}>
-      <App />
-      <Toaster />
-    </Provider>
-  </StrictMode>
+  <Provider store={store}>
+    <App />
+    <Toaster />
+  </Provider>
 );

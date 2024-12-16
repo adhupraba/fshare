@@ -1,5 +1,6 @@
+import base64
 from rest_framework import serializers
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import make_password, check_password
 from .models import User
 from cryptography.hazmat.primitives import serialization
 from django.contrib.auth import authenticate
@@ -41,11 +42,12 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         mfa_enabled = False
 
         private_key, public_key = generate_rsa_key_pair()
-        enc_priv_key = encrypt_private_key(private_key, master_password)
+        enc_priv_key_binary = encrypt_private_key(private_key, master_password)
+        enc_priv_key = base64.b64encode(enc_priv_key_binary).decode("utf-8")
         public_key = public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        )
+        ).decode("utf-8")
 
         user = User(
             name=name,
@@ -81,4 +83,25 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid credentials.")
 
         attrs["user"] = user
+        return attrs
+
+
+class GetEncPrivateKeySerializer(serializers.Serializer):
+    master_password = serializers.CharField(write_only=True)
+
+    def validate_master_password(self, value):
+        return validators.validate_password(value)
+
+    def validate(self, attrs):
+        user = self.context.get("user", None)
+
+        if not user:
+            raise serializers.ValidationError("User is not authenticated")
+
+        mp = attrs.get("master_password")
+        is_verified = check_password(mp, user.master_password_hash)
+
+        if not is_verified:
+            raise serializers.ValidationError("Invalid credential.")
+
         return attrs

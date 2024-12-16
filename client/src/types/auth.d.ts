@@ -64,3 +64,12 @@ export type TRefreshTokenRequest = {
 export type TRefreshTokenResponse = {
   access: string;
 };
+
+export type TMasterPasswordValidateRequest = {
+  master_password: string;
+};
+
+export type TMasterPasswordValidateResponse = {
+  message: string;
+  enc_private_key: string;
+};

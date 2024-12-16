@@ -10,6 +10,7 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import PasswordRequirements from "../password-requirements";
 
 interface ILoginFormProps {
   callback: (data: TLoginResponse) => void;
@@ -78,16 +79,7 @@ const LoginForm: React.FC<ILoginFormProps> = ({ callback }) => {
           )}
         />
 
-        <div className="text-muted-foreground text-sm space-y-2">
-          <p>Password should contain:</p>
-          <ul className="px-5 list-disc list-outside inline-block text-left">
-            <li>Atleast one lower case character</li>
-            <li>Atleast one upper case character</li>
-            <li>Atleast one number</li>
-            <li>Atleast one special character from {"!@#$%^&*(),.?:{}|<>"}</li>
-            <li>5 to 20 characters</li>
-          </ul>
-        </div>
+        <PasswordRequirements />
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           Login {isLoading && <Loader2 className="animate-spin w-3 h-3" />}

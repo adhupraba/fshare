@@ -1,7 +1,6 @@
 import os
 from django.db import models
 from django.conf import settings
-from django.utils import timezone
 
 
 class File(models.Model):
@@ -13,7 +12,7 @@ class File(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def get_full_path(self):
-        return os.path.join(settings.MEDIA_ROOT, self.encrypted_file_path)
+        return os.path.join(settings.MEDIA_ROOT, self.server_enc_file_name)
 
 
 class FileShare(models.Model):
@@ -21,7 +20,7 @@ class FileShare(models.Model):
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="shared"
     )
-    encrypted_file_key = models.BinaryField()
+    encrypted_file_key = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(default=None)
     can_view = models.BooleanField(default=True)

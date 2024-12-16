@@ -1,4 +1,7 @@
 import os, uuid, base64, jwt, json
+
+from requests_toolbelt.multipart.encoder import MultipartEncoder
+
 from django.conf import settings
 from django.utils import timezone
 from django.http import HttpResponse
@@ -65,12 +68,17 @@ class FileUploadView(APIView):
                 recipient = User.objects.get(email=email)
             except User.DoesNotExist:
                 continue
+
             if not recipient.public_key:
                 continue
 
-            enc_key_for_recipient = encrypt_with_public_key(
+            enc_key_for_recipient_binary = encrypt_with_public_key(
                 recipient.public_key, encryption_key_b64
             )
+            enc_key_for_recipient = base64.b64encode(
+                enc_key_for_recipient_binary
+            ).decode("utf-8")
+
             FileShare.objects.create(
                 file=f_obj,
                 recipient=recipient,
@@ -79,12 +87,13 @@ class FileUploadView(APIView):
                 can_download=rcp_can_download,
                 expires_at=expires_at,
             )
-            valid_recipients_count += 1
 
         if request.user.public_key:
-            owner_enc_key = encrypt_with_public_key(
+            owner_enc_key_binary = encrypt_with_public_key(
                 request.user.public_key, encryption_key_b64
             )
+            owner_enc_key = base64.b64encode(owner_enc_key_binary).decode("utf-8")
+
             FileShare.objects.create(
                 file=f_obj,
                 recipient=request.user,
@@ -95,12 +104,13 @@ class FileUploadView(APIView):
             )
 
         # Generate a single share token which can be used by all the recipients
-        token = generate_share_jwt(f_obj.id)
+        token, token_exp_at = generate_share_jwt(f_obj.id)
 
         return Response(
             {
                 "message": "File uploaded and shares created successfully.",
                 "share_token": token,
+                "token_exp_at": token_exp_at,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -128,7 +138,9 @@ class SharedFileAccessView(APIView):
 
         # Check if this user is a recipient in FileShare
         try:
-            share = FileShare.objects.get(file__id=file_id, recipient=request.user)
+            share = FileShare.objects.select_related("file__owner").get(
+                file__id=file_id, recipient=request.user
+            )
         except FileShare.DoesNotExist:
             return Response(
                 {"message": "You do not have permission to access this file."},
@@ -157,39 +169,52 @@ class SharedFileAccessView(APIView):
         with open(file_path, "rb") as fd:
             combined_data = fd.read()
 
-        b64_enc_key = base64.b64encode(share.encrypted_file_key).decode("utf-8")
         permissions_data = {
             "can_view": share.can_view,
             "can_download": share.can_download,
-            "encrypted_file_key": b64_enc_key,
+            "expires_at": share.expires_at.isoformat(),
+            "encrypted_file_key": share.encrypted_file_key,
+        }
+
+        metadata = f_obj.file_metadata
+        metadata["owner"] = {
+            "name": f_obj.owner.name,
+            "username": f_obj.owner.username,
         }
 
         nonce = combined_data[:12]
         encrypted_data = combined_data[12:]
         decrypted_data = decrypt_data(nonce, encrypted_data)
 
-        json_part = json.dumps(permissions_data, ensure_ascii=False)
-        # boundary for multipart response separating json and file data in the response
-        boundary = "----FILESHAREBOUNDARY"
+        file_metadata = json.dumps(metadata, ensure_ascii=False)
+        share_permission_data = json.dumps(permissions_data, ensure_ascii=False)
+        decypted_data_b64 = base64.b64encode(decrypted_data).decode("utf-8")
 
-        # multipart response data
-        multipart_body = (
-            f"--{boundary}\r\n"
-            "Content-Type: application/json; charset=utf-8\r\n"
-            "\r\n"
-            f"{json_part}\r\n"
-            f"--{boundary}\r\n"
-            "Content-Type: application/octet-stream\r\n"
-            f'Content-Disposition: attachment; filename="{f_obj.filename}"\r\n'
-            "\r\n"
+        multipart_body = MultipartEncoder(
+            fields={
+                "permissions": (
+                    "permissions.json",
+                    share_permission_data,
+                    "application/json",
+                ),
+                "metadata": (
+                    "metadata.json",
+                    file_metadata,
+                    "application/json",
+                ),
+                "file": (
+                    f_obj.server_enc_file_name,
+                    decypted_data_b64,
+                    "application/octet-stream",
+                ),
+            }
         )
-        multipart_body = multipart_body.encode("utf-8") + decrypted_data + b"\r\n"
-        multipart_body += f"--{boundary}--\r\n".encode("utf-8")
 
         response = HttpResponse(
-            multipart_body,
-            content_type=f"multipart/mixed; boundary={boundary}",
+            multipart_body.to_string(),
+            content_type=multipart_body.content_type,
         )
+
         response.status_code = status.HTTP_200_OK
 
         return response

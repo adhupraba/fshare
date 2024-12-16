@@ -7,3 +7,5 @@ qrcode
 pyopenssl
 cryptography
 pillow
+python-dotenv
+requests-toolbelt
