@@ -1,10 +1,11 @@
-import os, uuid, base64, jwt, json
+import os, uuid, base64, jwt, json, traceback
 
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 from django.conf import settings
 from django.utils import timezone
 from django.http import HttpResponse
+from django.db import transaction
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -26,94 +27,110 @@ class FileUploadView(APIView):
     permission_classes = [IsAdminOrRegularUser]
 
     def post(self, request):
-        serializer = FileUploadSerializer(data=request.data)
+        file_path = None
 
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            serializer = FileUploadSerializer(data=request.data)
 
-        uploaded_file = serializer.validated_data["file"]
-        encryption_key_b64 = serializer.validated_data["encryption_key_b64"]
-        file_metadata = serializer.validated_data["file_metadata"]
-        recipients_data = serializer.validated_data["recipients"]
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        file_content = uploaded_file.read()
+            uploaded_file = serializer.validated_data["file"]
+            encryption_key_b64 = serializer.validated_data["encryption_key_b64"]
+            file_metadata = serializer.validated_data["file_metadata"]
+            recipients_data = serializer.validated_data["recipients"]
 
-        # Server-side encryption
-        nonce, encrypted_data = encrypt_data(file_content)
-        combined_data = nonce + encrypted_data
+            file_content = uploaded_file.read()
 
-        unique_filename = f"{uuid.uuid4().hex}.enc"
-        file_path = os.path.join(settings.MEDIA_ROOT, unique_filename)
+            # Server-side encryption
+            nonce, encrypted_data = encrypt_data(file_content)
+            combined_data = nonce + encrypted_data
 
-        with open(file_path, "wb") as f:
-            f.write(combined_data)
+            unique_filename = f"{uuid.uuid4().hex}.enc"
+            file_path = os.path.join(settings.MEDIA_ROOT, unique_filename)
 
-        f_obj = File.objects.create(
-            owner=request.user,
-            server_enc_file_name=unique_filename,
-            file_metadata=file_metadata,
-        )
+            with open(file_path, "wb") as f:
+                f.write(combined_data)
 
-        expires_at = timezone.now() + timezone.timedelta(minutes=30)
+            with transaction.atomic():
+                f_obj = File.objects.create(
+                    owner=request.user,
+                    server_enc_file_name=unique_filename,
+                    file_metadata=file_metadata,
+                )
 
-        for rcp in recipients_data:
-            email = rcp.get("email")
-            rcp_can_view = rcp.get("can_view", True)
-            rcp_can_download = rcp.get("can_download", False)
+                expires_at = timezone.now() + timezone.timedelta(minutes=30)
 
-            if rcp_can_download:
-                rcp_can_view = True
+                for rcp in recipients_data:
+                    email = rcp.get("email")
+                    rcp_can_view = rcp.get("can_view", True)
+                    rcp_can_download = rcp.get("can_download", False)
 
-            try:
-                recipient = User.objects.get(email=email)
-            except User.DoesNotExist:
-                continue
+                    if rcp_can_download:
+                        rcp_can_view = True
 
-            if not recipient.public_key:
-                continue
+                    try:
+                        recipient = User.objects.get(email=email)
+                    except User.DoesNotExist:
+                        continue
 
-            enc_key_for_recipient_binary = encrypt_with_public_key(
-                recipient.public_key, encryption_key_b64
+                    if not recipient.public_key:
+                        continue
+
+                    enc_key_for_recipient_binary = encrypt_with_public_key(
+                        recipient.public_key, encryption_key_b64
+                    )
+                    enc_key_for_recipient = base64.b64encode(
+                        enc_key_for_recipient_binary
+                    ).decode("utf-8")
+
+                    FileShare.objects.create(
+                        file=f_obj,
+                        recipient=recipient,
+                        encrypted_file_key=enc_key_for_recipient,
+                        can_view=rcp_can_view,
+                        can_download=rcp_can_download,
+                        expires_at=expires_at,
+                    )
+
+                if request.user.public_key:
+                    owner_enc_key_binary = encrypt_with_public_key(
+                        request.user.public_key, encryption_key_b64
+                    )
+                    owner_enc_key = base64.b64encode(owner_enc_key_binary).decode(
+                        "utf-8"
+                    )
+
+                    FileShare.objects.create(
+                        file=f_obj,
+                        recipient=request.user,
+                        encrypted_file_key=owner_enc_key,
+                        can_view=True,
+                        can_download=True,
+                        expires_at=expires_at,
+                    )
+
+                # Generate a single share token which can be used by all the recipients
+                token, token_exp_at = generate_share_jwt(f_obj.id)
+
+            return Response(
+                {
+                    "message": "File uploaded and shares created successfully.",
+                    "share_token": token,
+                    "token_exp_at": token_exp_at,
+                },
+                status=status.HTTP_201_CREATED,
             )
-            enc_key_for_recipient = base64.b64encode(
-                enc_key_for_recipient_binary
-            ).decode("utf-8")
+        except Exception as e:
+            traceback.print_exc()
 
-            FileShare.objects.create(
-                file=f_obj,
-                recipient=recipient,
-                encrypted_file_key=enc_key_for_recipient,
-                can_view=rcp_can_view,
-                can_download=rcp_can_download,
-                expires_at=expires_at,
+            if (file_path is not None) and (os.path.exists(file_path)):
+                os.remove(file_path)
+
+            return Response(
+                {"message": "Something went wrong.", "stack": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-
-        if request.user.public_key:
-            owner_enc_key_binary = encrypt_with_public_key(
-                request.user.public_key, encryption_key_b64
-            )
-            owner_enc_key = base64.b64encode(owner_enc_key_binary).decode("utf-8")
-
-            FileShare.objects.create(
-                file=f_obj,
-                recipient=request.user,
-                encrypted_file_key=owner_enc_key,
-                can_view=True,
-                can_download=True,
-                expires_at=expires_at,
-            )
-
-        # Generate a single share token which can be used by all the recipients
-        token, token_exp_at = generate_share_jwt(f_obj.id)
-
-        return Response(
-            {
-                "message": "File uploaded and shares created successfully.",
-                "share_token": token,
-                "token_exp_at": token_exp_at,
-            },
-            status=status.HTTP_201_CREATED,
-        )
 
 
 class SharedFileAccessView(APIView):
@@ -121,100 +138,108 @@ class SharedFileAccessView(APIView):
     permission_classes = [IsActive]
 
     def get(self, request, token):
-        secret_key = os.environ.get("AUTH_JWT_SECRET_KEY")
-
         try:
-            payload = jwt.decode(token, secret_key, algorithms=["HS256"])
-        except jwt.ExpiredSignatureError:
-            return Response(
-                {"message": "Link expired."}, status=status.HTTP_403_FORBIDDEN
-            )
-        except jwt.InvalidTokenError:
-            return Response(
-                {"message": "Invalid link."}, status=status.HTTP_400_BAD_REQUEST
-            )
+            secret_key = os.environ.get("AUTH_JWT_SECRET_KEY")
 
-        file_id = payload.get("file_id")
+            try:
+                payload = jwt.decode(token, secret_key, algorithms=["HS256"])
+            except jwt.ExpiredSignatureError:
+                return Response(
+                    {"message": "Link expired."}, status=status.HTTP_403_FORBIDDEN
+                )
+            except jwt.InvalidTokenError:
+                return Response(
+                    {"message": "Invalid link."}, status=status.HTTP_400_BAD_REQUEST
+                )
 
-        # Check if this user is a recipient in FileShare
-        try:
-            share = FileShare.objects.select_related("file__owner").get(
-                file__id=file_id, recipient=request.user
-            )
-        except FileShare.DoesNotExist:
-            return Response(
-                {"message": "You do not have permission to access this file."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            file_id = payload.get("file_id")
 
-        # Check expiration
-        if share.expires_at < timezone.now():
-            return Response(
-                {"message": "Link expired."}, status=status.HTTP_403_FORBIDDEN
-            )
+            # Check if this user is a recipient in FileShare
+            try:
+                share = FileShare.objects.select_related("file__owner").get(
+                    file__id=file_id, recipient=request.user
+                )
+            except FileShare.DoesNotExist:
+                return Response(
+                    {"message": "You do not have permission to access this file."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
-        if not share.can_view:
-            return Response(
-                {"message": "View not allowed."}, status=status.HTTP_403_FORBIDDEN
-            )
+            # Check expiration
+            if share.expires_at < timezone.now():
+                return Response(
+                    {"message": "Link expired."}, status=status.HTTP_403_FORBIDDEN
+                )
 
-        f_obj = share.file
-        file_path = f_obj.get_full_path()
+            if not share.can_view:
+                return Response(
+                    {"message": "View not allowed."}, status=status.HTTP_403_FORBIDDEN
+                )
 
-        if not os.path.exists(file_path):
-            return Response(
-                {"message": "File missing on server."}, status=status.HTTP_404_NOT_FOUND
-            )
+            f_obj = share.file
+            file_path = f_obj.get_full_path()
 
-        with open(file_path, "rb") as fd:
-            combined_data = fd.read()
+            if not os.path.exists(file_path):
+                return Response(
+                    {"message": "File missing on server."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
-        permissions_data = {
-            "can_view": share.can_view,
-            "can_download": share.can_download,
-            "expires_at": share.expires_at.isoformat(),
-            "encrypted_file_key": share.encrypted_file_key,
-        }
+            with open(file_path, "rb") as fd:
+                combined_data = fd.read()
 
-        metadata = f_obj.file_metadata
-        metadata["owner"] = {
-            "name": f_obj.owner.name,
-            "username": f_obj.owner.username,
-        }
-
-        nonce = combined_data[:12]
-        encrypted_data = combined_data[12:]
-        decrypted_data = decrypt_data(nonce, encrypted_data)
-
-        file_metadata = json.dumps(metadata, ensure_ascii=False)
-        share_permission_data = json.dumps(permissions_data, ensure_ascii=False)
-        decypted_data_b64 = base64.b64encode(decrypted_data).decode("utf-8")
-
-        multipart_body = MultipartEncoder(
-            fields={
-                "permissions": (
-                    "permissions.json",
-                    share_permission_data,
-                    "application/json",
-                ),
-                "metadata": (
-                    "metadata.json",
-                    file_metadata,
-                    "application/json",
-                ),
-                "file": (
-                    f_obj.server_enc_file_name,
-                    decypted_data_b64,
-                    "application/octet-stream",
-                ),
+            permissions_data = {
+                "can_view": share.can_view,
+                "can_download": share.can_download,
+                "expires_at": share.expires_at.isoformat(),
+                "encrypted_file_key": share.encrypted_file_key,
             }
-        )
 
-        response = HttpResponse(
-            multipart_body.to_string(),
-            content_type=multipart_body.content_type,
-        )
+            metadata = f_obj.file_metadata
+            metadata["owner"] = {
+                "name": f_obj.owner.name,
+                "username": f_obj.owner.username,
+            }
 
-        response.status_code = status.HTTP_200_OK
+            nonce = combined_data[:12]
+            encrypted_data = combined_data[12:]
+            decrypted_data = decrypt_data(nonce, encrypted_data)
 
-        return response
+            file_metadata = json.dumps(metadata, ensure_ascii=False)
+            share_permission_data = json.dumps(permissions_data, ensure_ascii=False)
+            decypted_data_b64 = base64.b64encode(decrypted_data).decode("utf-8")
+
+            multipart_body = MultipartEncoder(
+                fields={
+                    "permissions": (
+                        "permissions.json",
+                        share_permission_data,
+                        "application/json",
+                    ),
+                    "metadata": (
+                        "metadata.json",
+                        file_metadata,
+                        "application/json",
+                    ),
+                    "file": (
+                        f_obj.server_enc_file_name,
+                        decypted_data_b64,
+                        "application/octet-stream",
+                    ),
+                }
+            )
+
+            response = HttpResponse(
+                multipart_body.to_string(),
+                content_type=multipart_body.content_type,
+            )
+
+            response.status_code = status.HTTP_200_OK
+
+            return response
+        except Exception as e:
+            traceback.print_exc()
+            return Response(
+                {"message": "Something went wrong.", "stack": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )

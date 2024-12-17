@@ -1,11 +1,20 @@
 import pyotp, qrcode, base64, os, jwt
-from django.utils import timezone
 from io import BytesIO
+
+from django.utils import timezone
+from django.conf import settings
+
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from django.conf import settings
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+
+def get_server_key():
+    key = os.environ.get("SECRET_KEY")
+    return key.encode("utf-8")
 
 
 def generate_rsa_key_pair():
@@ -75,9 +84,42 @@ def generate_totp_uri(secret, email, issuer="FShare"):
     return f"otpauth://totp/{issuer}:{email}?secret={secret}&issuer={issuer}"
 
 
-def generate_qr_code_image_uri(totp_uri):
+def generate_qr_code_image_uri(totp_uri: str) -> str:
     img = qrcode.make(totp_uri)
     buffered = BytesIO()
     img.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
     return f"data:image/png;base64,{img_str}"
+
+
+def encrypt_mfa_secret(mfa_secret: str) -> str:
+    backend = default_backend()
+    iv = os.urandom(16)
+    cipher = Cipher(algorithms.AES(get_server_key()), modes.CFB(iv), backend=backend)
+    encryptor = cipher.encryptor()
+    encrypted_data = encryptor.update(mfa_secret.encode()) + encryptor.finalize()
+
+    return base64.b64encode(iv + encrypted_data).decode("utf-8")
+
+
+def decrypt_mfa_secret(encrypted_secret: str) -> str:
+    backend = default_backend()
+    data = base64.b64decode(encrypted_secret)
+    iv = data[:16]
+    encrypted_data = data[16:]
+    cipher = Cipher(algorithms.AES(get_server_key()), modes.CFB(iv), backend=backend)
+    decryptor = cipher.decryptor()
+    decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
+
+    return decrypted_data.decode("utf-8")
+
+
+def get_formatted_user(user):
+    return {
+        "id": user.id,
+        "name": user.name,
+        "username": user.username,
+        "email": user.email,
+        "role": user.role,
+        "is_active": user.is_active,
+    }

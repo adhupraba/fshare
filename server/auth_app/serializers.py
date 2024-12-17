@@ -1,11 +1,19 @@
 import base64
+
 from rest_framework import serializers
-from django.contrib.auth.hashers import make_password, check_password
-from .models import User
 from cryptography.hazmat.primitives import serialization
+
+from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth import authenticate
-from .utils import generate_mfa_secret, generate_rsa_key_pair, encrypt_private_key
+
 from . import validators
+from .models import User
+from .utils import (
+    encrypt_mfa_secret,
+    generate_mfa_secret,
+    generate_rsa_key_pair,
+    encrypt_private_key,
+)
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -38,7 +46,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         password = validated_data["password"]
         master_password = validated_data["master_password"]
         role = "user"
-        mfa_secret = generate_mfa_secret()
+        mfa_secret = encrypt_mfa_secret(generate_mfa_secret())
         mfa_enabled = False
 
         private_key, public_key = generate_rsa_key_pair()
@@ -96,7 +104,7 @@ class GetEncPrivateKeySerializer(serializers.Serializer):
         user = self.context.get("user", None)
 
         if not user:
-            raise serializers.ValidationError("User is not authenticated")
+            raise serializers.ValidationError("User is not authenticated.")
 
         mp = attrs.get("master_password")
         is_verified = check_password(mp, user.master_password_hash)
@@ -105,3 +113,43 @@ class GetEncPrivateKeySerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid credential.")
 
         return attrs
+
+
+class AdminUpdateUserSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=True)
+    role = serializers.ChoiceField(
+        required=False, choices=User._meta.get_field("role").choices
+    )
+    is_active = serializers.BooleanField(required=False)
+
+    class Meta:
+        model = User
+        fields = ["id", "role", "is_active"]
+
+    def validate_id(self, value):
+        user = self.context.get("user", None)
+
+        if not user:
+            raise serializers.ValidationError("User is not authenticated.")
+
+        if user.id == value:
+            raise serializers.ValidationError("User cannot update one's own data.")
+
+        if not User.objects.filter(id=value).exists():
+            raise serializers.ValidationError("User with this id does not exist.")
+
+        return value
+
+    def validate(self, attrs):
+        if (attrs.get("role") is not None) and (attrs.get("is_active") is not None):
+            raise serializers.ValidationError(
+                "Valid data must be provided to update a user's data."
+            )
+
+        return attrs
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "name", "username", "email", "role", "is_active"]

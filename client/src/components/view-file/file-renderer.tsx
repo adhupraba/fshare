@@ -54,7 +54,7 @@ const FileRenderer: React.FC<IFileRendererProps> = ({ blobUrl, metadata, permiss
   }
 
   return (
-    <div className="flex flex-col justify-start items-center mt-12">
+    <div className="flex flex-col justify-start items-center pt-12">
       <div className="w-full mb-4 flex flex-col-reverse gap-3 md:flex-row md:justify-between md:items-start">
         <div>
           <span>
@@ -78,20 +78,26 @@ const FileRenderer: React.FC<IFileRendererProps> = ({ blobUrl, metadata, permiss
       </div>
 
       {fileType === "audio" && (
-        <audio src={blobUrl} controls controlsList="nodownload" onContextMenu={(e) => e.preventDefault()} />
+        <audio
+          src={blobUrl}
+          controls
+          controlsList="nodownload"
+          className="w-full"
+          onContextMenu={(e) => e.preventDefault()}
+        />
       )}
 
       {fileType === "video" && (
         <video
           src={blobUrl}
-          className="max-w-96 max-h-72 w-full h-full"
+          className="w-full"
           controls
           controlsList="nodownload"
           onContextMenu={(e) => e.preventDefault()}
         />
       )}
 
-      {fileType === "image" && <img src={blobUrl} onContextMenu={(e) => e.preventDefault()} />}
+      {fileType === "image" && <img src={blobUrl} className="w-full" onContextMenu={(e) => e.preventDefault()} />}
 
       {fileType === "pdf" && <PdfViewer pdfUrl={blobUrl} />}
     </div>

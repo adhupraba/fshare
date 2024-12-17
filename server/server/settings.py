@@ -160,7 +160,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWS_CREDENTIALS = True
 
 # mfa temp token will be valid for the specified minutes
-MFA_TOKEN_TIME_LIMIT_IN_MINS = 10
+MFA_TOKEN_TIME_LIMIT_IN_MINS = 15
 
 # 5 MB file size limit
 FILE_SIZE_LIMIT_IN_MB = 5

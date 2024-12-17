@@ -9,11 +9,14 @@ from .models import User
 class UserAdmin(DjangoUserAdmin):
     """Define admin model for custom User model with no email field."""
 
+    readonly_fields = ["id", "mfa_secret", "encrypted_private_key", "public_key"]
+
     fieldsets = (
         (
             _("Personal info"),
             {
                 "fields": (
+                    "id",
                     "name",
                     "email",
                     "username",

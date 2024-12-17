@@ -66,7 +66,7 @@ class User(AbstractUser):
     public_key = models.TextField(null=True, blank=True)
 
     # MFA fields
-    mfa_secret = models.CharField(max_length=64, blank=True, null=True)
+    mfa_secret = models.CharField(max_length=512, blank=True, null=True)
     mfa_enabled = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"

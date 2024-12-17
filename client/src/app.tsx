@@ -8,8 +8,31 @@ import ViewFile from "./pages/view-file.page";
 import ManageUsers from "./pages/manage-users.page";
 import NotFound from "./pages/not-found";
 import Layout from "./components/layout";
+import { useEffect } from "react";
+import { ACCESS_TOKEN } from "./config/constants";
+import api from "./lib/api";
+import { TGetUserResponse } from "./types/auth";
+import { store } from "./store";
+import { logout, setUser } from "./reducers/auth-reducer";
 
 const App = () => {
+  useEffect(() => {
+    fetchUserDetails();
+  }, []);
+
+  const fetchUserDetails = async () => {
+    try {
+      const access = localStorage.getItem(ACCESS_TOKEN);
+
+      if (!access) return;
+
+      const { data } = await api.get<TGetUserResponse>("/api/auth/get-user");
+      store.dispatch(setUser({ user: data.user }));
+    } catch (err) {
+      store.dispatch(logout());
+    }
+  };
+
   return (
     <Router>
       <Routes>
@@ -55,7 +78,7 @@ const App = () => {
             </ProtectedRoute>
           }
         />
-        {/* <Route path="*" element={<NotFound />} /> */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );

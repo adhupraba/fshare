@@ -6,11 +6,7 @@ from django.utils import timezone
 
 
 def get_server_key():
-    key = os.environ.get("SERVER_ENCRYPTION_KEY")
-
-    if not key:
-        raise ValueError("SERVER_ENCRYPTION_KEY is not set!")
-
+    key = os.environ.get("SERVER_FILE_ENCRYPTION_KEY")
     return key.encode("utf-8")
 
 

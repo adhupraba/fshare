@@ -1,3 +1,5 @@
+import { TPageInfo, TPaginatedResponse } from "./api";
+
 export type TRole = "admin" | "user" | "guest";
 
 export type TUser = {
@@ -6,6 +8,7 @@ export type TUser = {
   username: string;
   email: string;
   role: TRole;
+  is_active: boolean;
 };
 
 export type TLoginRequest = {
@@ -72,4 +75,22 @@ export type TMasterPasswordValidateRequest = {
 export type TMasterPasswordValidateResponse = {
   message: string;
   enc_private_key: string;
+};
+
+export type TGetUsersResponse = TPaginatedResponse<TUser>;
+
+export type TGetUserResponse = {
+  message: string;
+  user: TUser;
+};
+
+export type TUpdateUserRequest = {
+  id: number;
+  role?: TRole;
+  is_active?: boolean;
+};
+
+export type TUpdateUserResponse = {
+  message: string;
+  user: TUser;
 };

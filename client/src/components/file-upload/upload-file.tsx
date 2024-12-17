@@ -87,7 +87,7 @@ const UploadFile = () => {
   };
 
   return (
-    <div className="w-full mx-auto max-w-5xl p-8">
+    <div className="pt-12">
       <h2 className="text-2xl font-semibold text-center mb-4">Upload File</h2>
       <Dropzone onSelectFile={onSelectFile} isUploading={isUploading} />
       <DisplayFile file={selectedFile} isUploading={isUploading} handleFileDelete={handleFileDelete} />
