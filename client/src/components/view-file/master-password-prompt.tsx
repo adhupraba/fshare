@@ -13,12 +13,13 @@ const MasterPasswordPrompt: React.FC<IMasterPasswordPromptProps> = ({ onValidate
     setIsOpen(true);
   }, []);
 
-  const onOpenChange = (open: boolean) => {
-    setIsOpen(open);
+  const handleValidated = (masterPassword: string, encPrivateKey: string) => {
+    setIsOpen(false);
+    onValidated(masterPassword, encPrivateKey);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen}>
       <DialogContent aria-describedby="Master Password Validate Dialog">
         <DialogHeader>
           <DialogTitle>Enter Master Password</DialogTitle>
@@ -27,7 +28,7 @@ const MasterPasswordPrompt: React.FC<IMasterPasswordPromptProps> = ({ onValidate
           </DialogDescription>
         </DialogHeader>
 
-        <MasterPasswordForm callback={onValidated} />
+        <MasterPasswordForm callback={handleValidated} />
       </DialogContent>
     </Dialog>
   );

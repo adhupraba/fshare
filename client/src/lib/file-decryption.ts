@@ -1,5 +1,5 @@
 type DecryptFileParam = {
-  encryptedFile: Uint8Array<ArrayBuffer>;
+  encryptedFile: Uint8Array;
   encryptedFileEncryptionKey: string;
   decryptedFileMimeType: string;
   encryptedPrivateKey: string;
@@ -26,10 +26,7 @@ export class FileDecryption {
   }
 
   /** Derive key from master password which is used to decrypt the private key */
-  private async deriveKeyFromMasterPassword(
-    masterPassword: Uint8Array<ArrayBufferLike>,
-    salt: Uint8Array<ArrayBufferLike>
-  ) {
+  private async deriveKeyFromMasterPassword(masterPassword: Uint8Array, salt: Uint8Array) {
     const baseKey = await crypto.subtle.importKey("raw", masterPassword, { name: "PBKDF2" }, false, ["deriveKey"]);
 
     const derivedKey = await crypto.subtle.deriveKey(
@@ -104,7 +101,7 @@ export class FileDecryption {
   }
 
   /** Get the decrypted file buffer by using the decrypted file encryption key */
-  private async getDecryptedBuffer(encryptedFile: Uint8Array<ArrayBuffer>, encryptionKey: JsonWebKey) {
+  private async getDecryptedBuffer(encryptedFile: Uint8Array, encryptionKey: JsonWebKey) {
     const iv = new Uint8Array(encryptedFile.slice(0, 12));
     const encryptedContent = encryptedFile.slice(12);
 

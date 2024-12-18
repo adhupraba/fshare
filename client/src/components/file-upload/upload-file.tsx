@@ -20,11 +20,15 @@ const UploadFile = () => {
 
   const onSelectFile = (file: File) => {
     setSelectedFile(file);
+    // reset existing data whenever a file is changed
+    setShareData(undefined);
+    setRecipients([]);
   };
 
   const handleFileDelete = () => {
     setSelectedFile(null);
     setShareData(undefined);
+    setRecipients([]);
   };
 
   const onAddRecipient = (recipient: TRecipient) => {

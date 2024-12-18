@@ -1,9 +1,10 @@
 import { getFileType } from "@/lib/utils";
 import { TFileMetadata, TFilePermissions } from "@/types/file";
-import { Download, Eye, FileWarningIcon } from "lucide-react";
-import { useEffect } from "react";
-import PdfViewer from "./pdf-viewer";
+import { Download, Eye, FileWarningIcon, Loader2 } from "lucide-react";
+import { useEffect, lazy, Suspense } from "react";
 import { Button } from "../ui/button";
+
+const PdfViewer = lazy(() => import("./pdf-viewer"));
 
 interface IFileRendererProps {
   blobUrl: string;
@@ -99,7 +100,11 @@ const FileRenderer: React.FC<IFileRendererProps> = ({ blobUrl, metadata, permiss
 
       {fileType === "image" && <img src={blobUrl} className="w-full" onContextMenu={(e) => e.preventDefault()} />}
 
-      {fileType === "pdf" && <PdfViewer pdfUrl={blobUrl} />}
+      {fileType === "pdf" && (
+        <Suspense fallback={<Loader2 className="animate-spin w-8 h-8 grid place-content-center" />}>
+          <PdfViewer pdfUrl={blobUrl} />
+        </Suspense>
+      )}
     </div>
   );
 };

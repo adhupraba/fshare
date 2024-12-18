@@ -9,7 +9,6 @@ import {
   PaginationPrevious,
 } from "./ui/pagination";
 import { useSearchParams, useLocation } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import { PAGE_QUERY_PARAM } from "@/config/constants";
 
 interface IDynamicPaginationProps {
@@ -110,7 +109,7 @@ export const DynamicPagination: React.FC<IDynamicPaginationProps> = ({ pageSize,
               to={buildLink(Math.max(page - 1, 1))}
               aria-disabled={page === 1 || disabled}
               tabIndex={page === 1 ? -1 : undefined}
-              className={page === 1 || disabled ? "pointer-events-none opacity-50 opacity-50" : undefined}
+              className={page === 1 || disabled ? "pointer-events-none opacity-50" : undefined}
             />
           </PaginationItem>
           {renderPageNumbers()}
@@ -119,7 +118,7 @@ export const DynamicPagination: React.FC<IDynamicPaginationProps> = ({ pageSize,
               to={buildLink(Math.min(page + 1, totalPageCount))}
               aria-disabled={page === totalPageCount || disabled}
               tabIndex={page === totalPageCount ? -1 : undefined}
-              className={page === totalPageCount || disabled ? "pointer-events-none opacity-50 opacity-50" : undefined}
+              className={page === totalPageCount || disabled ? "pointer-events-none opacity-50" : undefined}
             />
           </PaginationItem>
         </PaginationContent>

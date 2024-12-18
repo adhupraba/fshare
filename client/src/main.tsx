@@ -20,7 +20,7 @@ if (access && refresh) {
 
     store.dispatch(setTokens({ access, refresh }));
   } catch (err) {
-    console.error(err);
+    console.error("startup user info load error =>", err);
     store.dispatch(logout());
   }
 }

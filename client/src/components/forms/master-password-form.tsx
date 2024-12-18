@@ -36,8 +36,6 @@ const MasterPasswordForm: React.FC<IMasterPasswordFormProps> = ({ callback }) =>
 
       callback(values.master_password, data.enc_private_key);
     } catch (err: any) {
-      console.error("onMasterPasswordSubmit error =>", err);
-
       toast({
         title: "Error",
         description: err.message,

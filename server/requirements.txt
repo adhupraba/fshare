@@ -9,3 +9,5 @@ cryptography
 pillow
 python-dotenv
 requests-toolbelt
+gunicorn
+whitenoise

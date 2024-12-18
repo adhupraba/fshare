@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { getDocument, GlobalWorkerOptions, PDFDocumentProxy } from "pdfjs-dist";
-
-GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+import type { PDFDocumentProxy } from "pdfjs-dist";
 
 interface IPDFViewerProps {
   pdfUrl: string;
@@ -12,10 +10,18 @@ const PdfViewer: React.FC<IPDFViewerProps> = ({ pdfUrl }) => {
   const [loadedPages, setLoadedPages] = useState(new Set()); // Tracks which pages are loaded
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const loadPDFJS = async () => {
+    const pdfjs = await import("pdfjs-dist");
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js`; // Worker setup
+    return pdfjs;
+  };
+
   useEffect(() => {
     // Load the PDF document
     const loadPdf = async () => {
       try {
+        const { getDocument } = await loadPDFJS();
+
         const pdf = await getDocument(pdfUrl).promise;
         setPdfDocument(pdf); // Save the PDF document for rendering
       } catch (error) {

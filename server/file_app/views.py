@@ -35,6 +35,12 @@ class FileUploadView(APIView):
             if not serializer.is_valid():
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+            if request.user.role == "guest":
+                return Response(
+                    {"message": "Guest users cannot upload files"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
             uploaded_file = serializer.validated_data["file"]
             encryption_key_b64 = serializer.validated_data["encryption_key_b64"]
             file_metadata = serializer.validated_data["file_metadata"]

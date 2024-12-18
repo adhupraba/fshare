@@ -11,6 +11,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import PasswordRequirements from "../password-requirements";
+import { AxiosError } from "axios";
 
 interface IRegisterFormProps {
   callback: (data: TRegisterResponse) => void;
@@ -45,14 +46,30 @@ const RegisterForm: React.FC<IRegisterFormProps> = ({ callback }) => {
 
       callback(data);
     } catch (err: any) {
+      const message = getApiErrorMessage(err);
+
       toast({
         title: "Error",
-        description: err.message,
+        description: message,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const getApiErrorMessage = (err: any) => {
+    if (err instanceof AxiosError && err.response?.data) {
+      const resFields = Object.keys(err.response.data);
+      const formFields = Object.keys(registerSchema.shape);
+      const field = resFields.find((rf) => formFields.includes(rf));
+
+      if (field) {
+        return err.response.data[field]?.[0];
+      }
+    }
+
+    return err.message;
   };
 
   return (

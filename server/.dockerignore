@@ -2,5 +2,4 @@ __pycache__
 .env
 media
 assets
-db.sqlite3
-.venv
+**/**/db.sqlite3

@@ -1,19 +1,19 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-
+import { useEffect, lazy, Suspense } from "react";
 import ProtectedRoute from "./components/protected-route";
-import Home from "./pages/home.page";
-import Login from "./pages/login.page";
-import Register from "./pages/register.page";
-import ViewFile from "./pages/view-file.page";
-import ManageUsers from "./pages/manage-users.page";
-import NotFound from "./pages/not-found";
 import Layout from "./components/layout";
-import { useEffect } from "react";
 import { ACCESS_TOKEN } from "./config/constants";
 import api from "./lib/api";
 import { TGetUserResponse } from "./types/auth";
 import { store } from "./store";
 import { logout, setUser } from "./reducers/auth-reducer";
+
+const Home = lazy(() => import("./pages/home.page"));
+const Login = lazy(() => import("./pages/login.page"));
+const Register = lazy(() => import("./pages/register.page"));
+const ViewFile = lazy(() => import("./pages/view-file.page"));
+const ManageUsers = lazy(() => import("./pages/manage-users.page"));
+const NotFound = lazy(() => import("./pages/not-found"));
 
 const App = () => {
   useEffect(() => {
@@ -41,7 +41,9 @@ const App = () => {
             index
             element={
               <ProtectedRoute isPrivate>
-                <Home />
+                <Suspense>
+                  <Home />
+                </Suspense>
               </ProtectedRoute>
             }
           />
@@ -49,7 +51,9 @@ const App = () => {
             path="manage-users"
             element={
               <ProtectedRoute isPrivate allowedRoles={["admin"]}>
-                <ManageUsers />
+                <Suspense>
+                  <ManageUsers />
+                </Suspense>
               </ProtectedRoute>
             }
           />
@@ -57,7 +61,9 @@ const App = () => {
             path="files/shared/:shareToken"
             element={
               <ProtectedRoute isPrivate>
-                <ViewFile />
+                <Suspense>
+                  <ViewFile />
+                </Suspense>
               </ProtectedRoute>
             }
           />
@@ -66,7 +72,9 @@ const App = () => {
           path="/login"
           element={
             <ProtectedRoute openRoute>
-              <Login />
+              <Suspense>
+                <Login />
+              </Suspense>
             </ProtectedRoute>
           }
         />
@@ -74,11 +82,20 @@ const App = () => {
           path="/register"
           element={
             <ProtectedRoute openRoute>
-              <Register />
+              <Suspense>
+                <Register />
+              </Suspense>
             </ProtectedRoute>
           }
         />
-        <Route path="*" element={<NotFound />} />
+        <Route
+          path="*"
+          element={
+            <Suspense>
+              <NotFound />
+            </Suspense>
+          }
+        />
       </Routes>
     </Router>
   );

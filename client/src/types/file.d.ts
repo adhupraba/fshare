@@ -38,6 +38,6 @@ export type TFileInfo = {
   encryptedFile: Uint8Array<ArrayBuffer>;
 };
 
-export type TDecryptionStages = "fetching" | "masterPassword" | "decrypting" | "decrypted";
+export type TDecryptionStages = "fetching" | "noAccess" | "masterPassword" | "decrypting" | "decrypted" | "errored";
 
 export type TAcceptedFileType = "image" | "video" | "audio" | "pdf";

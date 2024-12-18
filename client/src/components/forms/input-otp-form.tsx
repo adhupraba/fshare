@@ -11,7 +11,6 @@ import { setTokens, setUser } from "@/reducers/auth-reducer";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { AxiosError } from "axios";
 
 interface IInputOTPFormProps {
   mfaTempToken: string;

@@ -23,7 +23,11 @@ function addRefreshSubscriber(callback: RefreshSubscriberCallback) {
 
 function modifyErrorObject(error: any) {
   let message = error.message;
-  const d = error.response.data;
+  let d = error.response.data;
+
+  if (d instanceof ArrayBuffer) {
+    d = JSON.parse(new TextDecoder().decode(d as ArrayBuffer));
+  }
 
   if (d?.non_field_errors?.length) {
     message = d.non_field_errors[0];

@@ -1,10 +1,13 @@
 import FileRenderer from "@/components/view-file/file-renderer";
 import MasterPasswordPrompt from "@/components/view-file/master-password-prompt";
+import NoAccessModal from "@/components/view-file/no-access-modal";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 import { FileDecryption } from "@/lib/file-decryption";
 import { extractMultipartData } from "@/lib/utils";
 import { TDecryptionStages, TFileInfo } from "@/types/file";
+import { AxiosError } from "axios";
+import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
@@ -12,7 +15,6 @@ const ViewFile = () => {
   const { shareToken } = useParams() as { shareToken: string };
 
   const [fileInfo, setFileInfo] = useState<TFileInfo>();
-  const [isLoading, setIsLoading] = useState(false);
   const [stage, setStage] = useState<TDecryptionStages>();
   const [blobUrl, setBlobUrl] = useState<string>();
 
@@ -24,7 +26,6 @@ const ViewFile = () => {
 
   const fetchFile = async (token: string) => {
     try {
-      setIsLoading(true);
       setStage("fetching");
 
       const res = await api.get(`/api/files/shared/${token}`, { responseType: "arraybuffer" });
@@ -33,13 +34,15 @@ const ViewFile = () => {
       setFileInfo(extractedInfo);
       setStage("masterPassword");
     } catch (err: any) {
+      if (err instanceof AxiosError && err.response?.status === 403) {
+        setStage("noAccess");
+      }
+
       toast({
         title: "Error",
         description: err.message,
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -61,15 +64,29 @@ const ViewFile = () => {
       setBlobUrl(URL.createObjectURL(blob));
     } catch (err) {
       console.error("file error =====>", err);
-      setStage(undefined);
+      setStage("errored");
     }
   };
 
   return (
     <>
+      {stage === "fetching" && (
+        <div className="absolute top-1/2 left-1/2">
+          <div className="flex items-center gap-4">
+            <Loader2 className="animate-spin w-8 h-8" />
+            <p>Loading</p>
+          </div>
+        </div>
+      )}
+      {stage === "noAccess" && <NoAccessModal />}
       {stage === "masterPassword" && <MasterPasswordPrompt onValidated={onMasterPasswordValidated} />}
       {stage === "decrypted" && !!blobUrl && fileInfo && (
         <FileRenderer blobUrl={blobUrl} metadata={fileInfo.metadata} permissions={fileInfo.permissions} />
+      )}
+      {stage === "errored" && (
+        <p className="w-full text-center p-8 text-red-500 font-medium text-lg">
+          Couldn't decrypt the file. Something went wrong. Please try again later.
+        </p>
       )}
     </>
   );
