@@ -31,7 +31,28 @@ The project includes a Docker setup for running both the client and server simul
   cp .env.example .env
   ```
 
-- Update the `.env` file with appropriate values
+- Update the `.env` file with appropriate values. Here are some sample values:
+
+  ```bash
+  ### this .env is used for docker compose
+
+  # CLIENT ENV VARIABLES
+  VITE_API_URL="http://localhost:8000"
+
+  # SERVER ENV VARIABLES
+  SECRET_KEY="EB585CAE79C5716B446A8506D6E81313" # 32 bytes key used to encrypt mfa secret
+  SERVER_FILE_ENCRYPTION_KEY="A17FB154FC9BD982C137515C9DC36216" # 32 bytes for AES-256. used for encrypting files
+  MFA_JWT_SECRET_KEY="369FD1B0BFC1C6070DAF41FD490BE641963B17E5A93108070F7AD04BAC4504D9" # secret key used to generate temporary jwt tokens for mfa registration
+  AUTH_JWT_SECRET_KEY="1B7FD022D3499C0BCBE8D9CB1EE0C97594B2491BEB86C28380731C46D294EF28" # secret key used to generate login auth tokens
+  DEBUG_MODE="False" # True or False
+  ALLOWED_HOSTS="localhost,127.0.0.1" # allowed hosts used in settings.py
+  CORS_ALLOWED_ORIGINS="http://localhost:5173,http://127.0.0.1:5173,http://localhost,https://localhost" # allowed hosts used in settings.py
+  ```
+
+- Please generate unique keys at the time of running the application for better security
+  ```bash
+  openssl enc -aes-128-cbc -k secret -P -md sha1 # generates 32 bytes key
+  ```
 
 2. **Custom certificates for SSL/TLS**
 
@@ -125,7 +146,23 @@ pip install -r requirements.txt
   cp .env.example .env
   ```
 
-- Update the `.env` file with appropriate values
+- Update the `.env` file with appropriate values. Here are some sample values:
+
+  ```bash
+  SECRET_KEY="EB585CAE79C5716B446A8506D6E81313" # 32 bytes key used to encrypt mfa secret
+  SERVER_FILE_ENCRYPTION_KEY="A17FB154FC9BD982C137515C9DC36216" # 32 bytes for AES-256. used for encrypting files
+  MFA_JWT_SECRET_KEY="369FD1B0BFC1C6070DAF41FD490BE641963B17E5A93108070F7AD04BAC4504D9" # secret key used to generate temporary jwt tokens for mfa registration
+  AUTH_JWT_SECRET_KEY="1B7FD022D3499C0BCBE8D9CB1EE0C97594B2491BEB86C28380731C46D294EF28" # secret key used to generate login auth tokens
+  DEBUG_MODE="False" # True or False
+  ALLOWED_HOSTS="localhost,127.0.0.1" # allowed hosts used in settings.py
+  CORS_ALLOWED_ORIGINS="http://localhost:5173,http://127.0.0.1:5173,http://localhost,https://localhost" # allowed hosts used in settings.py
+  ```
+
+- Please generate unique keys at the time of running the application for better security
+
+  ```bash
+  openssl enc -aes-128-cbc -k secret -P -md sha1 # generates 32 bytes key
+  ```
 
 5. **Apply Migrations**:
 
@@ -171,7 +208,13 @@ npm install
   cp .env.example .env
   ```
 
-- Update the `.env` file with appropriate values
+- Update the `.env` file with appropriate values. Here are some sample values:
+
+  ```bash
+  VITE_API_URL="http://localhost:8000"
+  ```
+
+- Please generate unique keys at the time of running the application for better security
 
 4. **Start the Frontend Development Server**:
 
