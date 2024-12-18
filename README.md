@@ -108,9 +108,15 @@ The project includes a Docker setup for running both the client and server simul
   python manage.py createsuperuser
   ```
 
-6. **Self signed certificates**
+- Don't use this admin user as a normal application user as the RSA keys and master password will not be generated.
 
-- The source code comes with a one year valid self signed `SSL` certificate to enable `HTTPS` communication with the backend.
+6. **Promoting Regular User to Admin Role**
+
+- When a regular user signs up using the application's registration flow, the user can be converted to an `Admin` through the admin panel (`http://localhost:8000/admin`) using the previously created admin user's credentials.
+
+- Note: The admin panel workaround is required only for the first `Regular User` to be converted to `Admin` role.
+
+- Now the newly converted `Admin` role user can change the roles of any other user who registers in the application.
 
 ---
 
@@ -176,7 +182,17 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-7. **Start the Server**:
+Don't use this admin user as a normal application user as the RSA keys and master password will not be generated.
+
+7. **Promoting Regular User to Admin Role**
+
+- When a regular user signs up using the application's registration flow, the user can be converted to an `Admin` through the admin panel (`http://localhost:8000/admin`) using the previously created admin user's credentials.
+
+- Note: The admin panel workaround is required only for the first `Regular User` to be converted to `Admin` role.
+
+- Now the newly converted `Admin` role user can change the roles of any other user who registers in the application.
+
+8. **Start the Server**:
 
 ```bash
 python manage.py runserver
