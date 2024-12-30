@@ -2,6 +2,8 @@
 
 FShare is a secure and robust file-sharing application that enables users to upload, share, and manage encrypted files. It includes a **Django backend** (server) for handling API requests and business logic, and a **React/Vite frontend** (client) for the user interface.
 
+The live project is hosted at https://fshare.adhupraba.com/
+
 ---
 
 ## **Table of Contents**
@@ -37,7 +39,7 @@ The project includes a Docker setup for running both the client and server simul
   ### this .env is used for docker compose
 
   # CLIENT ENV VARIABLES
-  VITE_API_URL="http://localhost:8000"
+  VITE_API_URL="http://localhost:80"
 
   # SERVER ENV VARIABLES
   SECRET_KEY="EB585CAE79C5716B446A8506D6E81313" # 32 bytes key used to encrypt mfa secret
@@ -46,12 +48,17 @@ The project includes a Docker setup for running both the client and server simul
   AUTH_JWT_SECRET_KEY="1B7FD022D3499C0BCBE8D9CB1EE0C97594B2491BEB86C28380731C46D294EF28" # secret key used to generate login auth tokens
   DEBUG_MODE="False" # True or False
   ALLOWED_HOSTS="localhost,127.0.0.1" # allowed hosts used in settings.py
-  CORS_ALLOWED_ORIGINS="http://localhost:5173,http://127.0.0.1:5173,http://localhost,https://localhost" # allowed hosts used in settings.py
+  CORS_ALLOWED_ORIGINS="http://localhost,https://localhost" # allowed hosts used in settings.py
   ```
 
 - Please generate unique keys at the time of running the application for better security
+
   ```bash
-  openssl enc -aes-128-cbc -k secret -P -md sha1 # generates 32 bytes key
+  # generates 32 bytes key (use this for generating secret and file encryption key)
+  openssl enc -aes-128-cbc -k secret -P -md sha1
+
+  # generates 64 bytes key (use this for generating jwt secrets)
+  openssl enc -aes-256-cbc -k secret -P -md sha1
   ```
 
 2. **Custom certificates for SSL/TLS**
@@ -92,9 +99,9 @@ The project includes a Docker setup for running both the client and server simul
 
 4. **Access the application**:
 
-- Frontend: `https://localhost`
+- Frontend: `https://localhost/`
 
-- Backend: `http://localhost:8000`
+- Backend: `http://localhost/api/`
 
 5. **Create super user for Django admin**:
 
@@ -112,13 +119,11 @@ The project includes a Docker setup for running both the client and server simul
 
 6. **Promoting Regular User to Admin Role**
 
-- When a regular user signs up using the application's registration flow, the user can be converted to an `Admin` through the admin panel (`http://localhost:8000/admin`) using the previously created admin user's credentials.
+- When a regular user signs up using the application's registration flow, the user can be converted to an `Admin` through the admin panel (`https://localhost/admin/`) using the previously created admin user's credentials.
 
 - Note: The admin panel workaround is required only for the first `Regular User` to be converted to `Admin` role.
 
 - Now the newly converted `Admin` role user can change the roles of any other user who registers in the application.
-
----
 
 ### **Running Locally**
 
@@ -167,7 +172,11 @@ pip install -r requirements.txt
 - Please generate unique keys at the time of running the application for better security
 
   ```bash
-  openssl enc -aes-128-cbc -k secret -P -md sha1 # generates 32 bytes key
+  # generates 32 bytes key (use this for generating secret and file encryption key)
+  openssl enc -aes-128-cbc -k secret -P -md sha1
+
+  # generates 64 bytes key (use this for generating jwt secrets)
+  openssl enc -aes-256-cbc -k secret -P -md sha1
   ```
 
 5. **Apply Migrations**:
@@ -186,7 +195,7 @@ Don't use this admin user as a normal application user as the RSA keys and maste
 
 7. **Promoting Regular User to Admin Role**
 
-- When a regular user signs up using the application's registration flow, the user can be converted to an `Admin` through the admin panel (`http://localhost:8000/admin`) using the previously created admin user's credentials.
+- When a regular user signs up using the application's registration flow, the user can be converted to an `Admin` through the admin panel (`http://localhost:8000/admin/`) using the previously created admin user's credentials.
 
 - Note: The admin panel workaround is required only for the first `Regular User` to be converted to `Admin` role.
 
@@ -198,7 +207,7 @@ Don't use this admin user as a normal application user as the RSA keys and maste
 python manage.py runserver
 ```
 
-The backend will be available at `http://127.0.0.1:8000/`.
+The backend APIs will be available at `http://localhost:8000/api/`.
 
 ---
 
@@ -258,7 +267,11 @@ To test backend endpoints, use tools like Postman or curl.
 Example endpoint for login:
 
 ```bash
-POST http://127.0.0.1:8000/api/auth/login/
+# Docker setup
+POST http://localhost/api/auth/login/
+
+# Local setup
+POST http://localhost:8000/api/auth/login/
 ```
 
 For full API documentation, refer to the backend `urls.py`.
