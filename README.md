@@ -39,7 +39,7 @@ The project includes a Docker setup for running both the client and server simul
   ### this .env is used for docker compose
 
   # CLIENT ENV VARIABLES
-  VITE_API_URL="http://localhost:80"
+  VITE_API_URL="https://localhost"
 
   # SERVER ENV VARIABLES
   SECRET_KEY="EB585CAE79C5716B446A8506D6E81313" # 32 bytes key used to encrypt mfa secret
@@ -48,7 +48,7 @@ The project includes a Docker setup for running both the client and server simul
   AUTH_JWT_SECRET_KEY="1B7FD022D3499C0BCBE8D9CB1EE0C97594B2491BEB86C28380731C46D294EF28" # secret key used to generate login auth tokens
   DEBUG_MODE="False" # True or False
   ALLOWED_HOSTS="localhost,127.0.0.1" # allowed hosts used in settings.py
-  CORS_ALLOWED_ORIGINS="http://localhost,https://localhost" # allowed hosts used in settings.py
+  CORS_ALLOWED_ORIGINS="http://127.0.0.1,https://127.0.0.1,http://localhost,https://localhost" # allowed hosts used in settings.py
   ```
 
 - Please generate unique keys at the time of running the application for better security
@@ -101,7 +101,7 @@ The project includes a Docker setup for running both the client and server simul
 
 - Frontend: `https://localhost/`
 
-- Backend: `http://localhost/api/`
+- Backend: `https://localhost/api/`
 
 5. **Create super user for Django admin**:
 

@@ -12,7 +12,7 @@ const PdfViewer: React.FC<IPDFViewerProps> = ({ pdfUrl }) => {
 
   const loadPDFJS = async () => {
     const pdfjs = await import("pdfjs-dist");
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js`; // Worker setup
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.9.155/pdf.worker.min.mjs`; // Worker setup
     return pdfjs;
   };
 
