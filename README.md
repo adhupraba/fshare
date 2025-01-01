@@ -94,7 +94,7 @@ The project includes a Docker setup for running both the client and server simul
 - From the project root directory, run:
 
   ```bash
-  docker compose up --build
+  docker compose -f docker-compose.dev.yaml up --build
   ```
 
 4. **Access the application**:
@@ -308,8 +308,8 @@ For full API documentation, refer to the backend `urls.py`.
 - Rebuild containers to apply changes:
 
   ```bash
-  docker-compose down --volumes
-  docker-compose up --build
+  docker-compose -f docker-compose.dev.yaml down --volumes
+  docker-compose -f docker-compose.dev.yaml up --build
   ```
 
 ---
