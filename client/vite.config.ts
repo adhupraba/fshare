@@ -1,16 +1,9 @@
 import path from "path";
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vite";
-import compression from "vite-plugin-compression";
 
 export default defineConfig({
-  plugins: [
-    react(),
-    compression({
-      algorithm: "gzip",
-      compressionOptions: { level: 6 },
-    }),
-  ],
+  plugins: [react()],
   base: "/",
   resolve: {
     alias: {
@@ -32,7 +25,9 @@ export default defineConfig({
         minifyInternalExports: true,
         chunkFileNames: "assets/js/[name]-[hash].js",
         entryFileNames: "assets/js/[name]-[hash].js",
-        assetFileNames: ({ name }) => {
+        assetFileNames: ({ names }) => {
+          const [name] = names;
+
           if (/\.(gif|jpe?g|png|svg)$/.test(name ?? "")) {
             return "assets/images/[name]-[hash][extname]";
           }
