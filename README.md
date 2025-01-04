@@ -4,6 +4,8 @@ FShare is a secure and robust file-sharing application that enables users to upl
 
 The live project is hosted at https://fshare.adhupraba.com/
 
+To know how the application works, please see the [Application Workflow](#application-workflow) section.
+
 ---
 
 ## **Table of Contents**
@@ -13,6 +15,7 @@ The live project is hosted at https://fshare.adhupraba.com/
   - [Running Locally](#running-locally)
     - [Backend Setup](#backend-setup-django-server)
     - [Frontend Setup](#frontend-setup-react-client)
+- [Generating Unique Secret Keys](#secret-keys)
 - [Application Workflow](#application-workflow)
 - [API Access](#api-access)
 - [Troubleshooting](#troubleshooting)
@@ -30,36 +33,31 @@ The project includes a Docker setup for running both the client and server simul
 - In the project root, copy `.env.example` to `.env`:
 
   ```bash
-  cp .env.example .env
+  cp .env.client.example .env.client
+  cp .env.server.example .env.server
   ```
 
-- Update the `.env` file with appropriate values. Here are some sample values:
+- Update the `.env.client` and `.env.server` files with appropriate values.
 
-  ```bash
-  ### this .env is used for docker compose
+  - Sample .env.client:
 
-  # CLIENT ENV VARIABLES
-  VITE_API_URL="https://localhost"
+    ```bash
+    VITE_API_URL="https://localhost"
+    ```
 
-  # SERVER ENV VARIABLES
-  SECRET_KEY="EB585CAE79C5716B446A8506D6E81313" # 32 bytes key used to encrypt mfa secret
-  SERVER_FILE_ENCRYPTION_KEY="A17FB154FC9BD982C137515C9DC36216" # 32 bytes for AES-256. used for encrypting files
-  MFA_JWT_SECRET_KEY="369FD1B0BFC1C6070DAF41FD490BE641963B17E5A93108070F7AD04BAC4504D9" # secret key used to generate temporary jwt tokens for mfa registration
-  AUTH_JWT_SECRET_KEY="1B7FD022D3499C0BCBE8D9CB1EE0C97594B2491BEB86C28380731C46D294EF28" # secret key used to generate login auth tokens
-  DEBUG_MODE="False" # True or False
-  ALLOWED_HOSTS="localhost,127.0.0.1" # allowed hosts used in settings.py
-  CORS_ALLOWED_ORIGINS="http://127.0.0.1,https://127.0.0.1,http://localhost,https://localhost" # allowed hosts used in settings.py
-  ```
+  - Sample .env.server:
 
-- Please generate unique keys at the time of running the application for better security
+    ```bash
+    SECRET_KEY="EB585CAE79C5716B446A8506D6E81313" # 32 bytes key used to encrypt mfa secret
+    SERVER_FILE_ENCRYPTION_KEY="A17FB154FC9BD982C137515C9DC36216" # 32 bytes for AES-256. used for encrypting files
+    MFA_JWT_SECRET_KEY="369FD1B0BFC1C6070DAF41FD490BE641963B17E5A93108070F7AD04BAC4504D9" # secret key used to generate temporary jwt tokens for mfa registration
+    AUTH_JWT_SECRET_KEY="1B7FD022D3499C0BCBE8D9CB1EE0C97594B2491BEB86C28380731C46D294EF28" # secret key used to generate login auth tokens
+    DEBUG_MODE="False" # True or False
+    ALLOWED_HOSTS="localhost,127.0.0.1" # allowed hosts used in settings.py
+    CORS_ALLOWED_ORIGINS="http://127.0.0.1,https://127.0.0.1,http://localhost,https://localhost" # allowed hosts used in settings.py
+    ```
 
-  ```bash
-  # generates 32 bytes key (use this for generating secret and file encryption key)
-  openssl enc -aes-128-cbc -k secret -P -md sha1
-
-  # generates 64 bytes key (use this for generating jwt secrets)
-  openssl enc -aes-256-cbc -k secret -P -md sha1
-  ```
+- Please generate unique keys for secret env variables at the time of running the application for better security. See [Generating Unique Secret Keys](#secret-keys) section.
 
 2. **Custom certificates for SSL/TLS**
 
@@ -89,7 +87,11 @@ The project includes a Docker setup for running both the client and server simul
         - ./certs/server.key:/etc/nginx/certs/server.key
     ```
 
-3. **Build and Run the Docker Containers**:
+3. **Adding new environment variables (Important)**:
+
+Whenever a new `VITE_` env needs to be added to the client, make sure to update the `dockerfile.dev.client` and `dockerfile.prod.client` with a placeholder value and add that env entry into `entrypoint.sh` so at runtime the placeholder is replaced with appropriate value taken from the supplied `.env.client` file to the docker compose file.
+
+4. **Build and Run the Docker Containers**:
 
 - From the project root directory, run:
 
@@ -97,13 +99,13 @@ The project includes a Docker setup for running both the client and server simul
   docker compose -f docker-compose.dev.yaml up --build
   ```
 
-4. **Access the application**:
+5. **Access the application**:
 
 - Frontend: `https://localhost/`
 
 - Backend: `https://localhost/api/`
 
-5. **Create super user for Django admin**:
+6. **Create super user for Django admin**:
 
 - To create a super user for accessing the admin portal:
 
@@ -117,7 +119,7 @@ The project includes a Docker setup for running both the client and server simul
 
 - Don't use this admin user as a normal application user as the RSA keys and master password will not be generated.
 
-6. **Promoting Regular User to Admin Role**
+7. **Promoting Regular User to Admin Role**
 
 - When a regular user signs up using the application's registration flow, the user can be converted to an `Admin` through the admin panel (`https://localhost/admin/`) using the previously created admin user's credentials.
 
@@ -169,15 +171,7 @@ pip install -r requirements.txt
   CORS_ALLOWED_ORIGINS="http://localhost:5173,http://127.0.0.1:5173,http://localhost,https://localhost" # allowed hosts used in settings.py
   ```
 
-- Please generate unique keys at the time of running the application for better security
-
-  ```bash
-  # generates 32 bytes key (use this for generating secret and file encryption key)
-  openssl enc -aes-128-cbc -k secret -P -md sha1
-
-  # generates 64 bytes key (use this for generating jwt secrets)
-  openssl enc -aes-256-cbc -k secret -P -md sha1
-  ```
+- Please generate unique keys for secret env variables at the time of running the application for better security. See [Generating Unique Secret Keys](#secret-keys) section.
 
 5. **Apply Migrations**:
 
@@ -248,6 +242,18 @@ npm run dev
 ```
 
 The frontend will be available at `http://localhost:5173/`.
+
+---
+
+## **Generating Unique Secret Keys**
+
+```bash
+  # generates 32 bytes key (use this for generating secret and file encryption key)
+  openssl enc -aes-128-cbc -k secret -P -md sha1
+
+  # generates 64 bytes key (use this for generating jwt secrets)
+  openssl enc -aes-256-cbc -k secret -P -md sha1
+```
 
 ---
 

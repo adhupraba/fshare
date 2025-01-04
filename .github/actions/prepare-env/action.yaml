@@ -1,0 +1,19 @@
+name: Prepare .env
+description: Prepares the .env file with secrets
+inputs:
+  env_file_path:
+    description: Path to create the .env file
+    required: true
+  secrets_json:
+    description: JSON string containing all secrets
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Parse and populate .env
+      run: |
+        touch ${{ inputs.env_file_path }}
+        echo "${{ inputs.secrets_json }}" > secrets.json
+        jq -r 'to_entries | .[] | "\(.key)=\(.value)"' secrets.json > ${{ inputs.env_file_path }}
+        rm -rf secrets.json
+      shell: bash

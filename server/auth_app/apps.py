@@ -26,6 +26,7 @@ class AuthConfig(AppConfig):
             return  # Skip validation
 
         required_env_vars = [
+            "ENV",
             "SECRET_KEY",
             "SERVER_FILE_ENCRYPTION_KEY",
             "MFA_JWT_SECRET_KEY",

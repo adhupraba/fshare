@@ -8,16 +8,26 @@ on:
     paths:
       - server/**
       - .github/workflows/server.yaml
+      - .github/actions/prepare-env/action.yaml
       - docker-compose.prod.yaml
 
 jobs:
-  server-deploy:
+  server-build:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        architecture: [amd64, arm64]
 
     env:
       IMAGE_NAME: "${{ secrets.DOCKERHUB_USERNAME }}/fshare-server"
 
     steps:
+      - name: Check architecture
+        run: |
+          echo ${{ runner.os }} ${{ matrix.architecture }}
+          uname -m
+
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -29,29 +39,71 @@ jobs:
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push
+      - name: Build Docker image
         uses: docker/build-push-action@v6
         with:
           file: ./server/dockerfile.prod.server
           context: server
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ env.IMAGE_NAME }}:latest
+          platforms: linux/${{ matrix.architecture }}
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:${{ matrix.architecture }}
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:${{ matrix.architecture }}-cache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:${{ matrix.architecture }}-cache,mode=max
+
+      - name: Push Docker image
+        run: docker push ${{ env.IMAGE_NAME }}:${{ matrix.architecture }}
+
+  server-manifest:
+    needs: server-build
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_NAME: "${{ secrets.DOCKERHUB_USERNAME }}/fshare-server"
+
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create and Push Multi-Arch Manifest
+        run: |
+          docker manifest create ${{ env.IMAGE_NAME }}:latest ${{ env.IMAGE_NAME }}:amd64 ${{ env.IMAGE_NAME }}:arm64
+          docker manifest push ${{ env.IMAGE_NAME }}:latest
+
+  server-deploy:
+    needs: server-manifest
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_NAME: "${{ secrets.DOCKERHUB_USERNAME }}/fshare-server"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Prepare .env
-        run: |
-          touch .env
-          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
-          echo "SERVER_FILE_ENCRYPTION_KEY=${{ secrets.SERVER_FILE_ENCRYPTION_KEY }}" >> .env
-          echo "MFA_JWT_SECRET_KEY=${{ secrets.MFA_JWT_SECRET_KEY }}" >> .env
-          echo "AUTH_JWT_SECRET_KEY=${{ secrets.AUTH_JWT_SECRET_KEY }}" >> .env
-          echo "DEBUG_MODE=${{ secrets.DEBUG_MODE }}" >> .env
-          echo "ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}" >> .env
-          echo "CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}" >> .env
+        uses: ./.github/actions/prepare-env
+        with:
+          env_file_path: .env.server
+          secrets_json: |
+            {
+              \"ENV\": \"${{ secrets.ENV }}\",
+              \"SECRET_KEY\": \"${{ secrets.BACKEND_SECRET_KEY }}\",
+              \"SERVER_FILE_ENCRYPTION_KEY\": \"${{ secrets.BACKEND_SERVER_FILE_ENCRYPTION_KEY }}\",
+              \"MFA_JWT_SECRET_KEY\": \"${{ secrets.BACKEND_MFA_JWT_SECRET_KEY }}\",
+              \"AUTH_JWT_SECRET_KEY\": \"${{ secrets.BACKEND_AUTH_JWT_SECRET_KEY }}\",
+              \"DEBUG_MODE\": \"${{ secrets.BACKEND_DEBUG_MODE }}\",
+              \"ALLOWED_HOSTS\": \"${{ secrets.BACKEND_ALLOWED_HOSTS }}\",
+              \"CORS_ALLOWED_ORIGINS\": \"${{ secrets.BACKEND_CORS_ALLOWED_ORIGINS }}\"
+            }
 
       - name: Sync code to server
         uses: appleboy/scp-action@v0.1.0
@@ -60,7 +112,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           passphrase: ${{ secrets.SERVER_SSH_KEY_PASSPHRASE }}
-          source: ./docker-compose.prod.yaml,./.env
+          source: ./docker-compose.prod.yaml,./.env.server
           target: /home/${{ secrets.SERVER_USER }}/fshare/
 
       - name: Deploy to server
@@ -76,7 +128,3 @@ jobs:
             docker compose -f docker-compose.prod.yaml stop server
             docker compose -f docker-compose.prod.yaml rm -f server
             docker compose -f docker-compose.prod.yaml up -d server
-
-      - name: Cleanup
-        run: |
-          rm .env

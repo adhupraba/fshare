@@ -8,17 +8,11 @@ COPY package.json package-lock.json ./
 RUN npm install
 
 # Define environment variables
-ARG VITE_API_URL
-ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_API_URL="__VITE_API_URL__"
 
 # Build the React app
 COPY . .
 RUN npm run build
-
-# Stage 2: Serve with Nginx
-FROM nginx:1.27.3-alpine-slim
-
-WORKDIR /etc/nginx
 
 RUN apk add --no-cache openssl
 
@@ -27,6 +21,13 @@ RUN mkdir -p /etc/nginx/certs && \
     -keyout /etc/nginx/certs/server.key -out /etc/nginx/certs/server.crt \
     -subj "/CN=localhost"
 
+# Stage 2: Serve with Nginx
+FROM nginx:1.27.3-alpine-slim
+
+WORKDIR /etc/nginx
+
+COPY --from=builder /app/entrypoint.sh /etc/nginx/entrypoint.sh
+COPY --from=builder /etc/nginx/certs /etc/nginx/certs
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 COPY nginx.dev.conf /etc/nginx/conf.d/default.conf
@@ -34,5 +35,9 @@ COPY nginx.dev.conf /etc/nginx/conf.d/default.conf
 EXPOSE 443
 
 EXPOSE 80
+
+RUN chmod +x /etc/nginx/entrypoint.sh
+
+ENTRYPOINT ["/etc/nginx/entrypoint.sh"]
 
 CMD ["nginx", "-g", "daemon off;"]

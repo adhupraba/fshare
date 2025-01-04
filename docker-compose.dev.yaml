@@ -10,14 +10,8 @@ services:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
       - data_volume:/app/data
-    environment:
-      - SECRET_KEY=${SECRET_KEY}
-      - SERVER_FILE_ENCRYPTION_KEY=${SERVER_FILE_ENCRYPTION_KEY}
-      - MFA_JWT_SECRET_KEY=${MFA_JWT_SECRET_KEY}
-      - AUTH_JWT_SECRET_KEY=${AUTH_JWT_SECRET_KEY}
-      - DEBUG_MODE=${DEBUG_MODE}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+    env_file:
+      - .env.server
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8000/api/health/"]
       interval: 30s
@@ -30,9 +24,9 @@ services:
     build:
       context: client
       dockerfile: dockerfile.dev.client
-      args:
-        - VITE_API_URL=${VITE_API_URL}
     container_name: fshare_client
+    env_file:
+      - .env.client
     volumes:
       - ./certs/server.crt:/etc/nginx/certs/server.crt
       - ./certs/server.key:/etc/nginx/certs/server.key
@@ -40,7 +34,7 @@ services:
       - "80:80"
       - "443:443"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1/json/health.json"]
+      test: ["CMD", "wget", "--spider", "-q", "--no-check-certificate", "https://127.0.0.1/json/health.json"]
       interval: 30s
       timeout: 10s
       retries: 3

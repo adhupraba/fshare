@@ -81,6 +81,11 @@ def verify_totp(token, secret):
 
 
 def generate_totp_uri(secret, email, issuer="FShare"):
+    env = os.environ.get("ENV", "")
+
+    if env != "production":
+        issuer = f"{issuer} ({env.capitalize()})"
+
     return f"otpauth://totp/{issuer}:{email}?secret={secret}&issuer={issuer}"
 
 
