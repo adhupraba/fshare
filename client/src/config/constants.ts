@@ -9,7 +9,7 @@ export const UMAMI_PRELOAD_ID = "umami-preload";
 export const env = {
   apiUrl: import.meta.env.VITE_API_URL,
   umami: {
-    scriptUrl: import.meta.env.UMAMI_SCRIPT_URL,
-    websiteId: import.meta.env.UMAMI_WEBSITE_ID,
+    scriptUrl: import.meta.env.VITE_UMAMI_SCRIPT_URL,
+    websiteId: import.meta.env.VITE_UMAMI_WEBSITE_ID,
   },
 };

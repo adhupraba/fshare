@@ -3,8 +3,8 @@
 # Array of environment variables to replace
 ENV_VARS="
 VITE_API_URL
-UMAMI_SCRIPT_URL
-UMAMI_WEBSITE_ID
+VITE_UMAMI_SCRIPT_URL
+VITE_UMAMI_WEBSITE_ID
 "
 
 sed_script=$(mktemp)

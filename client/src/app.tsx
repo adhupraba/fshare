@@ -26,8 +26,8 @@ const App = () => {
       return;
     }
 
-    let script = document.getElementById(UMAMI_SCRIPT_ID) as HTMLScriptElement | null;
     let scriptPreload = document.getElementById(UMAMI_PRELOAD_ID) as HTMLLinkElement | null;
+    let script = document.getElementById(UMAMI_SCRIPT_ID) as HTMLScriptElement | null;
 
     if (!scriptPreload) {
       scriptPreload = document.createElement("link");
