@@ -95,7 +95,9 @@ jobs:
           env_file_path: .env.client
           secrets_json: |
             {
-              \"VITE_API_URL\": \"${{ secrets.CLIENT_VITE_API_URL }}\"
+              \"VITE_API_URL\": \"${{ secrets.CLIENT_VITE_API_URL }}\",
+              \"UMAMI_WEBSITE_ID\": \"${{ secrets.CLIENT_UMAMI_WEBSITE_ID }}\",
+              \"UMAMI_SCRIPT_URL\": \"${{ secrets.CLIENT_UMAMI_SCRIPT_URL }}\"
             }
 
       - name: Sync code to server

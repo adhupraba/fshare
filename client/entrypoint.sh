@@ -3,6 +3,8 @@
 # Array of environment variables to replace
 ENV_VARS="
 VITE_API_URL
+UMAMI_SCRIPT_URL
+UMAMI_WEBSITE_ID
 "
 
 sed_script=$(mktemp)
@@ -14,7 +16,8 @@ for VAR in $ENV_VARS; do
     printf "s|__%s__|%s|g\n" "$VAR" "$VALUE" >> "$sed_script"
     printf "Replacing __%s__ with %s\n" "$VAR" "$VALUE"
   else
-    printf "Warning: %s is not set. Placeholder __%s__ will not be replaced.\n" "$VAR" "$VAR" >&2
+    printf "s|__%s__|%s|g\n" "$VAR" "" >> "$sed_script"
+    printf "Warning: %s is not set. Placeholder __%s__ will be replaced with empty string.\n" "$VAR" "$VAR" >&2
   fi
 done
 

@@ -9,6 +9,8 @@ RUN npm install
 
 # Define environment variables
 ENV VITE_API_URL="__VITE_API_URL__"
+ENV UMAMI_SCRIPT_URL="__UMAMI_SCRIPT_URL__"
+ENV UMAMI_WEBSITE_ID="__UMAMI_WEBSITE_ID__"
 
 # Build the React app
 COPY . .
