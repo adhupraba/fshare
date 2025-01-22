@@ -1,9 +1,12 @@
+import { validateHash } from "./utils";
+
 type DecryptFileParam = {
   encryptedFile: Uint8Array;
   encryptedFileEncryptionKey: string;
   decryptedFileMimeType: string;
   encryptedPrivateKey: string;
   masterPassword: string;
+  fileHash: string;
 };
 
 export class FileDecryption {
@@ -15,10 +18,17 @@ export class FileDecryption {
     encryptedPrivateKey,
     encryptedFileEncryptionKey,
     masterPassword,
+    fileHash,
   }: DecryptFileParam) {
     const privateKey = await this.decryptPrivateKey(encryptedPrivateKey, masterPassword);
     const encryptionKey = await this.decryptFileEncryptionKey(privateKey, encryptedFileEncryptionKey);
     const decryptedBuffer = await this.getDecryptedBuffer(encryptedFile, encryptionKey);
+
+    const isValidated = await validateHash(decryptedBuffer, fileHash);
+
+    if (!isValidated) {
+      throw new Error("File integrity check failed");
+    }
 
     const decryptedFile = new Blob([decryptedBuffer], { type: decryptedFileMimeType });
 

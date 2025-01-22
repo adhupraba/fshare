@@ -1,3 +1,5 @@
+import { generateFileHash } from "./utils";
+
 export class FileEncryption {
   static async encrypt(file: File) {
     const symmetricKey = await crypto.subtle.generateKey(
@@ -29,6 +31,7 @@ export class FileEncryption {
     return {
       encryptionKey: exportedKey,
       encryptedFile: encryptedFileWithIV,
+      fileHash: await generateFileHash(fileBuffer),
     };
   }
 }

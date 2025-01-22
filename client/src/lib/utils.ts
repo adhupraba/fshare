@@ -84,3 +84,23 @@ export const extractMultipartData = (data: ArrayBuffer, contentType?: string) =>
     encryptedFile,
   };
 };
+
+export const generateFileHash = async (fileBuffer: ArrayBuffer) => {
+  const hashBuffer = await crypto.subtle.digest("SHA-256", fileBuffer); // Compute SHA-256 hash
+  const hashArray = Array.from(new Uint8Array(hashBuffer)); // Convert ArrayBuffer to byte array
+  const hashHex = hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join(""); //
+
+  return hashHex;
+};
+
+export const validateHash = async (fileBuffer: ArrayBuffer, expectedHash: string): Promise<boolean> => {
+  try {
+    const hashBuffer = await crypto.subtle.digest("SHA-256", fileBuffer); // Compute SHA-256 hash
+    const hashArray = Array.from(new Uint8Array(hashBuffer)); // Convert ArrayBuffer to byte array
+    const hashHex = hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join(""); // Convert to hex
+    return hashHex === expectedHash; // Compare the computed hash with the expected hash
+  } catch (err) {
+    console.error("Error validating hash:", err);
+    return false;
+  }
+};

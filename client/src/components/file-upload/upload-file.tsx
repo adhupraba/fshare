@@ -53,11 +53,12 @@ const UploadFile = () => {
     try {
       setIsUploading(true);
 
-      const { encryptedFile, encryptionKey } = await FileEncryption.encrypt(selectedFile);
+      const { encryptedFile, encryptionKey, fileHash } = await FileEncryption.encrypt(selectedFile);
       const metadata = {
         name: selectedFile.name,
         mimetype: selectedFile.type,
         size: selectedFile.size,
+        hash: fileHash,
       };
 
       const formData = new FormData();

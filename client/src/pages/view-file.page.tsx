@@ -58,6 +58,7 @@ const ViewFile = () => {
         encryptedFileEncryptionKey: fileInfo.permissions.encrypted_file_key,
         encryptedPrivateKey: encPrivateKey,
         masterPassword,
+        fileHash: fileInfo.metadata.hash,
       });
 
       setStage("decrypted");

@@ -30,7 +30,7 @@ class FileUploadSerializer(serializers.Serializer):
         except json.JSONDecodeError:
             raise serializers.ValidationError("Invalid JSON format in file_metadata.")
 
-        required_keys = {"name", "mimetype", "size"}
+        required_keys = {"name", "mimetype", "size", "hash"}
 
         if not all(key in metadata for key in required_keys):
             raise serializers.ValidationError(
@@ -47,6 +47,9 @@ class FileUploadSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Invalid or missing 'mimetype' in file_metadata."
             )
+
+        if not isinstance(metadata["hash"], str) or not metadata["hash"]:
+            raise serializers.ValidationError("Invalid file_hash.")
 
         allowed_mimetype_regex = r"^(image/.+|audio/.+|video/.+|application/pdf)$"
 

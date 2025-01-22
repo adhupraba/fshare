@@ -19,6 +19,7 @@ export type TFileMetadata = {
   name: string;
   mimetype: string;
   size: number;
+  hash: string;
   owner: {
     name: string;
     username: string;
