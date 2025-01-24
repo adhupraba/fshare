@@ -27,7 +27,7 @@ export class FileDecryption {
     const isValidated = await validateHash(decryptedBuffer, fileHash);
 
     if (!isValidated) {
-      throw new Error("File integrity check failed");
+      throw new Error("FILE_INTEGRITY_FAILED");
     }
 
     const decryptedFile = new Blob([decryptedBuffer], { type: decryptedFileMimeType });

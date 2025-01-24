@@ -17,6 +17,7 @@ const ViewFile = () => {
   const [fileInfo, setFileInfo] = useState<TFileInfo>();
   const [stage, setStage] = useState<TDecryptionStages>();
   const [blobUrl, setBlobUrl] = useState<string>();
+  const [customErrorMsg, setCustomErrorMsg] = useState("");
 
   const { toast } = useToast();
 
@@ -36,7 +37,11 @@ const ViewFile = () => {
     } catch (err: any) {
       if (err instanceof AxiosError && err.response?.status === 403) {
         setStage("noAccess");
+      } else {
+        setStage("errored");
       }
+
+      setCustomErrorMsg(err.message);
 
       toast({
         title: "Error",
@@ -63,9 +68,13 @@ const ViewFile = () => {
 
       setStage("decrypted");
       setBlobUrl(URL.createObjectURL(blob));
-    } catch (err) {
+    } catch (err: any) {
       console.error("file error =====>", err);
       setStage("errored");
+
+      if (err.message === "FILE_INTEGRITY_FAILED") {
+        setCustomErrorMsg("File integrity failed. Please try again.");
+      }
     }
   };
 
@@ -86,7 +95,7 @@ const ViewFile = () => {
       )}
       {stage === "errored" && (
         <p className="w-full text-center p-8 text-red-500 font-medium text-lg">
-          Couldn't decrypt the file. Something went wrong. Please try again later.
+          {customErrorMsg ? customErrorMsg : "Couldn't decrypt the file. Something went wrong. Please try again later."}
         </p>
       )}
     </>

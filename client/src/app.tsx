@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useEffect, lazy, Suspense } from "react";
-import { ACCESS_TOKEN, env, UMAMI_PRELOAD_ID, UMAMI_SCRIPT_ID } from "./config/constants";
+import { ACCESS_TOKEN } from "./config/constants";
 import { TGetUserResponse } from "./types/auth";
 import { store } from "./store";
 import { logout, setUser } from "./reducers/auth-reducer";
@@ -13,42 +13,12 @@ const Login = lazy(() => import("./pages/login.page"));
 const Register = lazy(() => import("./pages/register.page"));
 const ViewFile = lazy(() => import("./pages/view-file.page"));
 const ManageUsers = lazy(() => import("./pages/manage-users.page"));
-const NotFound = lazy(() => import("./pages/not-found"));
+const NotFound = lazy(() => import("./pages/not-found.page"));
 
 const App = () => {
   useEffect(() => {
     fetchUserDetails();
-    insertUmamiScript();
   }, []);
-
-  const insertUmamiScript = () => {
-    if (!env.umami.scriptUrl || !env.umami.websiteId) {
-      return;
-    }
-
-    let scriptPreload = document.getElementById(UMAMI_PRELOAD_ID) as HTMLLinkElement | null;
-    let script = document.getElementById(UMAMI_SCRIPT_ID) as HTMLScriptElement | null;
-
-    if (!scriptPreload) {
-      scriptPreload = document.createElement("link");
-      scriptPreload.id = UMAMI_PRELOAD_ID;
-      scriptPreload.rel = "preload";
-      scriptPreload.href = env.umami.scriptUrl;
-      scriptPreload.as = "script";
-
-      document.head.appendChild(scriptPreload);
-    }
-
-    if (!script) {
-      script = document.createElement("script");
-      script.id = UMAMI_SCRIPT_ID;
-      script.defer = true;
-      script.src = env.umami.scriptUrl;
-      script.setAttribute("data-website-id", env.umami.websiteId);
-
-      document.body.appendChild(script);
-    }
-  };
 
   const fetchUserDetails = async () => {
     try {
